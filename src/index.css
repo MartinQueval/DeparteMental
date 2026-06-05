@@ -589,10 +589,9 @@ input:focus {
   }
 
   .mode-grid {
-    flex: 1;
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, auto);
-    align-content: center;
+    grid-template-rows: repeat(4, 1fr);
+    margin: auto 0;
     gap: 0.8rem;
   }
 
