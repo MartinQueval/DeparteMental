@@ -11,7 +11,7 @@ type CellResult = 'ok' | 'ko' | 'target'
 
 function heatColor(code: string, stats: Record<string, DeptStats>): string {
   const s = stats[code]
-  if (!s) return '#2d3250'
+  if (!s) return '#ffffff'
   const rate = s.ok / s.seen
   if (rate >= 0.8) return '#22c55e'
   if (rate >= 0.5) return '#eab308'
@@ -100,7 +100,7 @@ export default function Carte() {
       )}
       {mode === 'heatmap' && (
         <p className="hint">
-          🟢 maîtrisé · 🟡 moyen · 🔴 à bosser · gris : jamais croisé
+          🟢 maîtrisé · 🟡 moyen · 🔴 à bosser · ⚪ jamais croisé
         </p>
       )}
 
@@ -121,7 +121,7 @@ export default function Carte() {
                   ? '#ef4444'
                   : r === 'target'
                     ? '#3b82f6'
-                    : '#2d3250'
+                    : '#ffffff'
           return (
             <path
               key={loc.id}
