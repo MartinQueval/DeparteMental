@@ -591,8 +591,9 @@ input:focus {
   .mode-grid {
     flex: 1;
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, 1fr);
-    gap: clamp(0.4rem, 1vh, 0.7rem);
+    grid-template-rows: repeat(4, auto);
+    align-content: space-evenly;
+    gap: 0.6rem;
   }
 
   .mode-card {
@@ -602,8 +603,7 @@ input:focus {
     column-gap: 1rem;
     row-gap: 0.2rem;
     align-items: center;
-    align-content: center;
-    padding: clamp(0.1rem, 0.5vh, 0.4rem) 1rem;
+    padding: 0.8rem 1rem;
   }
 
   .mode-icon {
