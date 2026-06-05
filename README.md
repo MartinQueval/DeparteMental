@@ -1,5 +1,7 @@
 # DéparteMental 🇫🇷
 
+**▶️ Jouer : [departe-mental.vercel.app](https://departe-mental.vercel.app)**
+
 Le jeu pour enfin retenir les 101 départements français : codes, noms, préfectures et sous-préfectures.
 
 ## Modes de jeu

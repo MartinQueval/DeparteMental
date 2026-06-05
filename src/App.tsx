@@ -73,32 +73,36 @@ export default function App() {
     const Mode = MODE_COMPONENTS[view]
     return (
       <div className="app">
-        <header className="mode-header">
-          <button className="btn-back" onClick={() => setView('home')}>← Menu</button>
-        </header>
-        <Mode />
+        <div className="view" key={view}>
+          <header className="mode-header">
+            <button className="btn-back" onClick={() => setView('home')}>← Menu</button>
+          </header>
+          <Mode />
+        </div>
       </div>
     )
   }
 
   return (
     <div className="app">
-      <header className="home-header">
-        <h1>
-          Départe<span className="accent">Mental</span>
-        </h1>
-        <p className="tagline">Le jeu pour enfin retenir les 101 départements 🇫🇷</p>
-      </header>
-      <Progress />
-      <main className="mode-grid">
-        {MODES.map((m) => (
-          <button key={m.id} className="mode-card" onClick={() => setView(m.id)}>
-            <span className="mode-icon">{m.icon}</span>
-            <span className="mode-title">{m.title}</span>
-            <span className="mode-desc">{m.desc}</span>
-          </button>
-        ))}
-      </main>
+      <div className="view" key="home">
+        <header className="home-header">
+          <h1>
+            Départe<span className="accent">Mental</span>
+          </h1>
+          <p className="tagline">Le jeu pour enfin retenir les 101 départements 🇫🇷</p>
+        </header>
+        <Progress />
+        <main className="mode-grid">
+          {MODES.map((m) => (
+            <button key={m.id} className="mode-card" onClick={() => setView(m.id)}>
+              <span className="mode-icon">{m.icon}</span>
+              <span className="mode-title">{m.title}</span>
+              <span className="mode-desc">{m.desc}</span>
+            </button>
+          ))}
+        </main>
+      </div>
     </div>
   )
 }

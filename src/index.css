@@ -21,12 +21,36 @@ body {
   background: radial-gradient(1200px 800px at 50% -10%, #232a55, var(--bg));
   color: var(--text);
   min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+button:active {
+  transform: scale(0.96);
 }
 
 .app {
   max-width: 640px;
   margin: 0 auto;
   padding: 1.25rem 1rem 3rem;
+}
+
+.view {
+  animation: view-in 0.3s ease both;
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* ---------- Accueil ---------- */
@@ -95,10 +119,32 @@ body {
   color: var(--text);
   cursor: pointer;
   transition: transform 0.12s ease, border-color 0.12s ease;
+  animation: card-in 0.45s ease both;
+}
+
+.mode-card:nth-child(1) { animation-delay: 0.05s; }
+.mode-card:nth-child(2) { animation-delay: 0.12s; }
+.mode-card:nth-child(3) { animation-delay: 0.19s; }
+.mode-card:nth-child(4) { animation-delay: 0.26s; }
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .mode-card:hover {
   transform: translateY(-3px);
+  border-color: var(--accent);
+}
+
+.mode-card:active {
+  transform: scale(0.97);
   border-color: var(--accent);
 }
 
@@ -223,6 +269,14 @@ h2 {
 
 .question-card.flash-ko {
   box-shadow: 0 0 0 3px var(--ko);
+  animation: shake 0.35s ease;
+}
+
+@keyframes shake {
+  20% { transform: translateX(-7px); }
+  45% { transform: translateX(6px); }
+  70% { transform: translateX(-4px); }
+  90% { transform: translateX(2px); }
 }
 
 .prompt {
@@ -315,6 +369,16 @@ input:focus {
 .flashcard.flipped {
   border-color: var(--accent);
   cursor: default;
+  animation: flip-in 0.35s ease;
+}
+
+@keyframes flip-in {
+  from {
+    transform: rotateY(90deg);
+  }
+  to {
+    transform: rotateY(0);
+  }
 }
 
 .card-front,
@@ -423,6 +487,7 @@ input:focus {
   padding: 0.55rem 0.8rem;
   align-items: center;
   font-size: 0.92rem;
+  animation: card-in 0.3s ease both;
 }
 
 .guess-row.guess-win {
@@ -473,4 +538,71 @@ input:focus {
 
 .carte-done {
   text-align: center;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 520px) {
+  .app {
+    padding: 0.75rem 0.75rem 1.5rem;
+  }
+
+  .home-header {
+    margin: 0.6rem 0 0.9rem;
+  }
+
+  .home-header h1 {
+    font-size: 2rem;
+  }
+
+  .tagline {
+    font-size: 0.85rem;
+    margin: 0.25rem 0 0;
+  }
+
+  .progress {
+    margin-bottom: 0.9rem;
+  }
+
+  .mode-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .mode-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 0.95rem;
+    row-gap: 0.15rem;
+    align-items: center;
+    padding: 0.85rem 1rem;
+  }
+
+  .mode-icon {
+    grid-row: 1 / span 2;
+    font-size: 2.3rem;
+  }
+
+  .mode-title {
+    font-size: 1.05rem;
+  }
+
+  .mode-desc {
+    font-size: 0.82rem;
+    line-height: 1.3;
+  }
+
+  .final-score {
+    font-size: 1.8rem;
+  }
+}
+
+/* ---------- Accessibilité ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
