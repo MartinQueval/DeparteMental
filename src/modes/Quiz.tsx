@@ -8,6 +8,15 @@ import {
   type Departement,
 } from '../lib/departements.ts'
 import { recordAnswer, getBest, setBest, weakWeight } from '../lib/storage.ts'
+import {
+  IconCheck,
+  IconFlame,
+  IconKeyboard,
+  IconTimer,
+  IconTrophy,
+  IconX,
+  IconZap,
+} from '../components/icons.tsx'
 
 const DURATION = 60
 
@@ -149,12 +158,14 @@ export default function Quiz() {
   if (phase === 'setup') {
     return (
       <div className="quiz setup">
-        <h2>⚡ Quiz éclair</h2>
+        <h2><IconZap /> Quiz éclair</h2>
         <p>{DURATION} secondes. Bonne réponse : +10 pts. Série de 3 : multiplicateur !</p>
         <p className="best">Record : {getBest('quiz')} pts</p>
         <div className="setup-buttons">
           <button className="btn-primary" onClick={() => start('qcm')}>QCM (4 choix)</button>
-          <button className="btn-primary" onClick={() => start('saisie')}>Saisie clavier 💪</button>
+          <button className="btn-primary" onClick={() => start('saisie')}>
+            <IconKeyboard /> Saisie clavier
+          </button>
         </div>
       </div>
     )
@@ -163,10 +174,10 @@ export default function Quiz() {
   if (phase === 'done') {
     return (
       <div className="quiz done">
-        <h2>{newRecord ? '🏆 Nouveau record !' : '⏱️ Terminé !'}</h2>
+        <h2>{newRecord ? <><IconTrophy /> Nouveau record !</> : <><IconTimer /> Terminé !</>}</h2>
         <p className="final-score">{score} pts</p>
         <p>
-          ✅ {count.ok} bonnes · ❌ {count.ko} ratées
+          <IconCheck className="icon-ok" /> {count.ok} bonnes · <IconX className="icon-ko" /> {count.ko} ratées
         </p>
         <p className="best">Record : {getBest('quiz')} pts</p>
         <button className="btn-primary" onClick={() => setPhase('setup')}>Rejouer</button>
@@ -179,10 +190,10 @@ export default function Quiz() {
   return (
     <div className="quiz play">
       <div className="hud">
-        <span className={`timer ${timeLeft <= 10 ? 'urgent' : ''}`}>⏱ {timeLeft}s</span>
+        <span className={`timer ${timeLeft <= 10 ? 'urgent' : ''}`}><IconTimer /> {timeLeft}s</span>
         <span className="score">{score} pts</span>
         <span className={`streak ${multiplier > 1 ? 'hot' : ''}`}>
-          🔥 {streak} {multiplier > 1 && `(×${multiplier})`}
+          <IconFlame /> {streak} {multiplier > 1 && `(×${multiplier})`}
         </span>
       </div>
 

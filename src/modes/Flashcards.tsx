@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { byCode, departements, shuffle } from '../lib/departements.ts'
 import { dueCards, recordAnswer, load, MAX_BOX } from '../lib/storage.ts'
+import {
+  IconCheck,
+  IconGraduationCap,
+  IconInbox,
+  IconLandmark,
+  IconLayers,
+  IconMapPin,
+  IconSparkle,
+  IconX,
+} from '../components/icons.tsx'
 
 const SESSION_SIZE = 10
 
@@ -38,13 +48,13 @@ export default function Flashcards() {
     const learned = Object.values(srs).filter((c) => c.box >= MAX_BOX).length
     return (
       <div className="cards setup">
-        <h2>🃏 Flashcards</h2>
+        <h2><IconLayers /> Flashcards</h2>
         <p>
           Répétition espacée (boîtes de Leitner) : les départements ratés reviennent
           vite, ceux que tu maîtrises s’espacent jusqu’à 30 jours.
         </p>
         <p className="best">
-          📥 {Math.min(due, SESSION_SIZE)} cartes à réviser · 🎓 {learned} bien ancrés
+          <IconInbox /> {Math.min(due, SESSION_SIZE)} cartes à réviser · <IconGraduationCap /> {learned} bien ancrés
         </p>
         <button className="btn-primary" onClick={start}>
           Démarrer la session
@@ -57,7 +67,7 @@ export default function Flashcards() {
     const ok = results.filter((r) => r.known).length
     return (
       <div className="cards done">
-        <h2>Session terminée 🎉</h2>
+        <h2>Session terminée <IconSparkle /></h2>
         <p className="final-score">
           {ok} / {results.length} connues
         </p>
@@ -66,7 +76,7 @@ export default function Flashcards() {
             const d = byCode[r.code]
             return (
               <li key={r.code}>
-                {r.known ? '✅' : '❌'} {d.code} — {d.nom}
+                {r.known ? <IconCheck className="icon-ok" /> : <IconX className="icon-ko" />} {d.code} — {d.nom}
               </li>
             )
           })}
@@ -94,21 +104,21 @@ export default function Flashcards() {
         ) : (
           <span className="card-back">
             <span className="card-nom">{dept.nom}</span>
-            <span className="card-pref">🏛️ {dept.prefecture}</span>
+            <span className="card-pref"><IconLandmark /> {dept.prefecture}</span>
             {dept.sousPrefectures.length > 0 && (
               <span className="card-souspref">{dept.sousPrefectures.join(' · ')}</span>
             )}
-            <span className="card-region">📍 {dept.region}</span>
+            <span className="card-region"><IconMapPin /> {dept.region}</span>
           </span>
         )}
       </button>
       {flipped && (
         <div className="grade-buttons">
           <button className="btn-ko" onClick={() => grade(false)}>
-            ❌ À revoir
+            <IconX /> À revoir
           </button>
           <button className="btn-ok" onClick={() => grade(true)}>
-            ✅ Je savais
+            <IconCheck /> Je savais
           </button>
         </div>
       )}

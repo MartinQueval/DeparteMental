@@ -7,6 +7,20 @@ import {
   type Departement,
 } from '../lib/departements.ts'
 import { getDaily, setDaily, recordAnswer, type DailyState } from '../lib/storage.ts'
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconCalendar,
+  IconCheck,
+  IconClipboard,
+  IconLandmark,
+  IconMapPin,
+  IconRuler,
+  IconSparkle,
+  IconTarget,
+  IconType,
+  IconX,
+} from '../components/icons.tsx'
 
 const MAX_GUESSES = 6
 
@@ -24,13 +38,13 @@ function dailyDept(dateKey: string): Departement {
   return departements[Math.abs(h) % departements.length]
 }
 
-function hints(target: Departement, wrongCount: number): string[] {
+function hints(target: Departement, wrongCount: number) {
   const all = [
-    `📍 Région : ${target.region}`,
-    `🔤 Le nom commence par « ${target.nom[0]} »`,
-    `📏 Le nom fait ${target.nom.length} caractères`,
-    `🏛️ La préfecture commence par « ${target.prefecture[0]} »`,
-    `🏛️ Préfecture : ${target.prefecture}`,
+    { Icon: IconMapPin, text: `Région : ${target.region}` },
+    { Icon: IconType, text: `Le nom commence par « ${target.nom[0]} »` },
+    { Icon: IconRuler, text: `Le nom fait ${target.nom.length} caractères` },
+    { Icon: IconLandmark, text: `La préfecture commence par « ${target.prefecture[0]} »` },
+    { Icon: IconLandmark, text: `Préfecture : ${target.prefecture}` },
   ]
   return all.slice(0, wrongCount)
 }
@@ -42,9 +56,21 @@ function GuessRow({ guess, target }: { guess: string; target: Departement }) {
     <div className={`guess-row ${d.code === target.code ? 'guess-win' : ''}`}>
       <span className="guess-nom">{d.nom}</span>
       <span className="guess-cell">
-        {d.code === target.code ? '🎯' : codeDiff > 0 ? '⬆️ n° plus grand' : '⬇️ n° plus petit'}
+        {d.code === target.code ? (
+          <IconTarget className="icon-ok" />
+        ) : codeDiff > 0 ? (
+          <><IconArrowUp /> n° plus grand</>
+        ) : (
+          <><IconArrowDown /> n° plus petit</>
+        )}
       </span>
-      <span className="guess-cell">{d.region === target.region ? '✅ région' : '❌ région'}</span>
+      <span className="guess-cell">
+        {d.region === target.region ? (
+          <><IconCheck className="icon-ok" /> région</>
+        ) : (
+          <><IconX className="icon-ko" /> région</>
+        )}
+      </span>
     </div>
   )
 }
@@ -100,11 +126,11 @@ export default function Daily() {
 
   return (
     <div className="daily">
-      <h2>📅 Défi du jour</h2>
+      <h2><IconCalendar /> Défi du jour</h2>
       <p>Devine le département mystère en {MAX_GUESSES} essais max.</p>
 
-      {hints(target, Math.min(wrongCount, 5)).map((h) => (
-        <p key={h} className="hint">{h}</p>
+      {hints(target, Math.min(wrongCount, 5)).map(({ Icon, text }) => (
+        <p key={text} className="hint"><Icon /> {text}</p>
       ))}
 
       <div className="guesses">
@@ -133,19 +159,21 @@ export default function Daily() {
       ) : (
         <div className="daily-result">
           {state.won ? (
-            <p className="final-score">Bravo ! 🎉 {state.guesses.length}/{MAX_GUESSES}</p>
+            <p className="final-score">
+              Bravo ! <IconSparkle className="accent" /> {state.guesses.length}/{MAX_GUESSES}
+            </p>
           ) : (
             <p className="final-score">
-              Raté ! C’était <strong>{target.nom} ({target.code})</strong> 😅
+              Raté ! C’était <strong>{target.nom} ({target.code})</strong>
             </p>
           )}
           <p>
-            🏛️ Préfecture : {target.prefecture}
+            <IconLandmark /> Préfecture : {target.prefecture}
             {target.sousPrefectures.length > 0 &&
               ` · Sous-préf. : ${target.sousPrefectures.join(', ')}`}
           </p>
           <button className="btn-primary" onClick={share}>
-            {copied ? 'Copié ! 📋' : 'Partager le résultat'}
+            {copied ? <><IconCheck /> Copié !</> : <><IconClipboard /> Partager le résultat</>}
           </button>
           <p className="hint">Reviens demain pour un nouveau département !</p>
         </div>

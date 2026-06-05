@@ -3,6 +3,14 @@ import Quiz from './modes/Quiz.tsx'
 import Flashcards from './modes/Flashcards.tsx'
 import Daily from './modes/Daily.tsx'
 import Carte from './modes/Carte.tsx'
+import {
+  IconZap,
+  IconLayers,
+  IconCalendar,
+  IconMap,
+  IconFlag,
+  type IconComponent,
+} from './components/icons.tsx'
 import { departements } from './lib/departements.ts'
 import { load } from './lib/storage.ts'
 
@@ -11,7 +19,7 @@ type View = 'home' | ModeId
 
 interface ModeDef {
   id: ModeId
-  icon: string
+  icon: IconComponent
   title: string
   desc: string
 }
@@ -19,25 +27,25 @@ interface ModeDef {
 const MODES: ModeDef[] = [
   {
     id: 'quiz',
-    icon: '⚡',
+    icon: IconZap,
     title: 'Quiz éclair',
     desc: '60 secondes, un max de bonnes réponses. Enchaîne pour le multiplicateur !',
   },
   {
     id: 'cards',
-    icon: '🃏',
+    icon: IconLayers,
     title: 'Flashcards',
     desc: 'Révision espacée : l’app insiste sur les départements que tu rates.',
   },
   {
     id: 'daily',
-    icon: '📅',
+    icon: IconCalendar,
     title: 'Défi du jour',
     desc: 'Un département mystère par jour, des indices à chaque essai.',
   },
   {
     id: 'carte',
-    icon: '🗺️',
+    icon: IconMap,
     title: 'Carte',
     desc: 'Clique le bon département sur la carte de France.',
   },
@@ -90,13 +98,15 @@ export default function App() {
           <h1>
             Départe<span className="accent">Mental</span>
           </h1>
-          <p className="tagline">Le jeu pour enfin retenir les 101 départements 🇫🇷</p>
+          <p className="tagline">
+            Le jeu pour enfin retenir les 101 départements <IconFlag className="accent" />
+          </p>
         </header>
         <Progress />
         <main className="mode-grid">
           {MODES.map((m) => (
             <button key={m.id} className="mode-card" onClick={() => setView(m.id)}>
-              <span className="mode-icon">{m.icon}</span>
+              <span className="mode-icon"><m.icon /></span>
               <span className="mode-title">{m.title}</span>
               <span className="mode-desc">{m.desc}</span>
             </button>

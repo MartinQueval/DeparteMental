@@ -38,6 +38,20 @@ button:active {
   padding: 1.25rem 1rem 3rem;
 }
 
+.icon {
+  display: inline-block;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
+.icon-ok {
+  color: var(--ok);
+}
+
+.icon-ko {
+  color: var(--ko);
+}
+
 .view {
   animation: view-in 0.3s ease both;
 }
@@ -150,6 +164,7 @@ button:active {
 
 .mode-icon {
   font-size: 2rem;
+  color: var(--accent);
 }
 
 .mode-title {

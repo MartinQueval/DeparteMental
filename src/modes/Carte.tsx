@@ -2,6 +2,7 @@ import { useState } from 'react'
 import franceMap from '@svg-maps/france.departments'
 import { byCode, shuffle } from '../lib/departements.ts'
 import { recordAnswer, load, type DeptStats } from '../lib/storage.ts'
+import { IconCheck, IconDot, IconMap, IconTarget } from '../components/icons.tsx'
 
 const ROUNDS = 10
 const mapCodes = franceMap.locations.map((l) => l.id)
@@ -66,7 +67,7 @@ export default function Carte() {
   if (!mode) {
     return (
       <div className="carte setup">
-        <h2>🗺️ Carte de France</h2>
+        <h2><IconMap /> Carte de France</h2>
         <div className="setup-buttons">
           <button className="btn-primary" onClick={start}>
             Jouer ({ROUNDS} départements à localiser)
@@ -85,22 +86,23 @@ export default function Carte() {
     <div className="carte">
       {mode === 'jeu' && !finished && target && (
         <div className="hud">
-          <span>🎯 {round + 1}/{ROUNDS}</span>
+          <span><IconTarget /> {round + 1}/{ROUNDS}</span>
           <span className="carte-target">
             Clique sur : <strong>{target.nom} ({target.code})</strong>
           </span>
-          <span className="score">{score} ✅</span>
+          <span className="score">{score} <IconCheck className="icon-ok" /></span>
         </div>
       )}
       {finished && (
         <div className="carte-done">
-          <p className="final-score">{score} / {ROUNDS} 🎯</p>
+          <p className="final-score">{score} / {ROUNDS} <IconTarget className="accent" /></p>
           <button className="btn-primary" onClick={start}>Rejouer</button>
         </div>
       )}
       {mode === 'heatmap' && (
         <p className="hint">
-          🟢 maîtrisé · 🟡 moyen · 🔴 à bosser · ⚪ jamais croisé
+          <IconDot color="#22c55e" /> maîtrisé · <IconDot color="#eab308" /> moyen ·{' '}
+          <IconDot color="#ef4444" /> à bosser · <IconDot color="#ffffff" /> jamais croisé
         </p>
       )}
 
