@@ -93,7 +93,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <div className="view" key="home">
+      <div className="view home" key="home">
         <header className="home-header">
           <h1>
             Départe<span className="accent">Mental</span>

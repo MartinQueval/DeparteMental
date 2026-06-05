@@ -1,13 +1,13 @@
 :root {
-  --bg: #16182b;
-  --surface: #21243d;
-  --surface-2: #2d3250;
-  --text: #eef0ff;
-  --muted: #9aa0c3;
-  --accent: #6c7bff;
-  --ok: #22c55e;
-  --ko: #ef4444;
-  --gold: #fbbf24;
+  --bg: #1a1d33;
+  --surface: #272c4b;
+  --surface-2: #353c66;
+  --text: #f3f5ff;
+  --muted: #bcc2e4;
+  --accent: #7d8aff;
+  --ok: #2fd56b;
+  --ko: #f25555;
+  --gold: #fcc935;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color-scheme: dark;
 }
@@ -18,7 +18,7 @@
 
 body {
   margin: 0;
-  background: radial-gradient(1200px 800px at 50% -10%, #232a55, var(--bg));
+  background: radial-gradient(1200px 800px at 50% -10%, #2e3566, var(--bg));
   color: var(--text);
   min-height: 100vh;
   -webkit-tap-highlight-color: transparent;
@@ -118,13 +118,15 @@ button:active {
 .mode-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-auto-rows: 1fr;
   gap: 1rem;
 }
 
 .mode-card {
   background: var(--surface);
-  border: 1px solid #343a63;
+  border: 1px solid #49518a;
   border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
   padding: 1.4rem 1.2rem;
   display: flex;
   flex-direction: column;
@@ -185,7 +187,7 @@ button:active {
 
 .btn-back {
   background: none;
-  border: 1px solid #343a63;
+  border: 1px solid #49518a;
   color: var(--muted);
   border-radius: 999px;
   padding: 0.4rem 1rem;
@@ -273,7 +275,9 @@ h2 {
 /* ---------- Quiz ---------- */
 .question-card {
   background: var(--surface);
+  border: 1px solid #49518a;
   border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
   padding: 1.6rem 1.2rem;
   transition: box-shadow 0.15s;
 }
@@ -313,7 +317,7 @@ h2 {
 
 .btn-choice {
   background: var(--surface-2);
-  border: 1px solid #3c4270;
+  border: 1px solid #525a96;
   color: var(--text);
   border-radius: 12px;
   padding: 0.9rem 0.6rem;
@@ -324,7 +328,7 @@ h2 {
 
 .btn-choice:hover:not(:disabled) {
   border-color: var(--accent);
-  background: #353b66;
+  background: #424a80;
 }
 
 form {
@@ -336,7 +340,7 @@ form {
 
 input {
   background: var(--surface-2);
-  border: 1px solid #3c4270;
+  border: 1px solid #525a96;
   color: var(--text);
   border-radius: 12px;
   padding: 0.75rem 1rem;
@@ -366,7 +370,7 @@ input:focus {
   max-width: 380px;
   min-height: 230px;
   background: var(--surface);
-  border: 1px solid #343a63;
+  border: 1px solid #49518a;
   border-radius: 20px;
   color: var(--text);
   cursor: pointer;
@@ -464,7 +468,7 @@ input:focus {
 
 .recap li {
   padding: 0.25rem 0;
-  border-bottom: 1px solid #2d3250;
+  border-bottom: 1px solid #3d4471;
 }
 
 /* ---------- Défi du jour ---------- */
@@ -506,7 +510,7 @@ input:focus {
 }
 
 .guess-row.guess-win {
-  background: #14532d;
+  background: #17703c;
 }
 
 .guess-nom {
@@ -548,7 +552,7 @@ input:focus {
 }
 
 .dept-path:hover {
-  fill: #444c85;
+  fill: #aab3ec;
 }
 
 .carte-done {
@@ -578,33 +582,42 @@ input:focus {
     margin-bottom: 0.9rem;
   }
 
+  .view.home {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - 2.25rem);
+  }
+
   .mode-grid {
+    flex: 1;
     grid-template-columns: 1fr;
-    gap: 0.65rem;
+    grid-template-rows: repeat(4, 1fr);
+    gap: 0.8rem;
   }
 
   .mode-card {
     display: grid;
     grid-template-columns: auto 1fr;
     grid-template-rows: auto auto;
-    column-gap: 0.95rem;
-    row-gap: 0.15rem;
+    column-gap: 1.1rem;
+    row-gap: 0.3rem;
     align-items: center;
-    padding: 0.85rem 1rem;
+    align-content: center;
+    padding: 0.85rem 1.15rem;
   }
 
   .mode-icon {
     grid-row: 1 / span 2;
-    font-size: 2.3rem;
+    font-size: 2.6rem;
   }
 
   .mode-title {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
   }
 
   .mode-desc {
-    font-size: 0.82rem;
-    line-height: 1.3;
+    font-size: 0.88rem;
+    line-height: 1.4;
   }
 
   .final-score {
