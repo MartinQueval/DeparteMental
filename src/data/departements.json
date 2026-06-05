@@ -1,0 +1,1041 @@
+[
+  {
+    "code": "01",
+    "nom": "Ain",
+    "prefecture": "Bourg-en-Bresse",
+    "sousPrefectures": [
+      "Belley",
+      "Gex",
+      "Nantua"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "02",
+    "nom": "Aisne",
+    "prefecture": "Laon",
+    "sousPrefectures": [
+      "Château-Thierry",
+      "Saint-Quentin",
+      "Soissons",
+      "Vervins"
+    ],
+    "region": "Hauts-de-France"
+  },
+  {
+    "code": "03",
+    "nom": "Allier",
+    "prefecture": "Moulins",
+    "sousPrefectures": [
+      "Montluçon",
+      "Vichy"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "04",
+    "nom": "Alpes-de-Haute-Provence",
+    "prefecture": "Digne-les-Bains",
+    "sousPrefectures": [
+      "Barcelonnette",
+      "Castellane",
+      "Forcalquier"
+    ],
+    "region": "Provence-Alpes-Côte d'Azur"
+  },
+  {
+    "code": "05",
+    "nom": "Hautes-Alpes",
+    "prefecture": "Gap",
+    "sousPrefectures": [
+      "Briançon"
+    ],
+    "region": "Provence-Alpes-Côte d'Azur"
+  },
+  {
+    "code": "06",
+    "nom": "Alpes-Maritimes",
+    "prefecture": "Nice",
+    "sousPrefectures": [
+      "Grasse"
+    ],
+    "region": "Provence-Alpes-Côte d'Azur"
+  },
+  {
+    "code": "07",
+    "nom": "Ardèche",
+    "prefecture": "Privas",
+    "sousPrefectures": [
+      "Largentière",
+      "Tournon-sur-Rhône"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "08",
+    "nom": "Ardennes",
+    "prefecture": "Charleville-Mézières",
+    "sousPrefectures": [
+      "Rethel",
+      "Sedan",
+      "Vouziers"
+    ],
+    "region": "Grand Est"
+  },
+  {
+    "code": "09",
+    "nom": "Ariège",
+    "prefecture": "Foix",
+    "sousPrefectures": [
+      "Pamiers",
+      "Saint-Girons"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "10",
+    "nom": "Aube",
+    "prefecture": "Troyes",
+    "sousPrefectures": [
+      "Bar-sur-Aube",
+      "Nogent-sur-Seine"
+    ],
+    "region": "Grand Est"
+  },
+  {
+    "code": "11",
+    "nom": "Aude",
+    "prefecture": "Carcassonne",
+    "sousPrefectures": [
+      "Limoux",
+      "Narbonne"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "12",
+    "nom": "Aveyron",
+    "prefecture": "Rodez",
+    "sousPrefectures": [
+      "Millau",
+      "Villefranche-de-Rouergue"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "13",
+    "nom": "Bouches-du-Rhône",
+    "prefecture": "Marseille",
+    "sousPrefectures": [
+      "Aix-en-Provence",
+      "Arles",
+      "Istres"
+    ],
+    "region": "Provence-Alpes-Côte d'Azur"
+  },
+  {
+    "code": "14",
+    "nom": "Calvados",
+    "prefecture": "Caen",
+    "sousPrefectures": [
+      "Bayeux",
+      "Lisieux",
+      "Vire"
+    ],
+    "region": "Normandie"
+  },
+  {
+    "code": "15",
+    "nom": "Cantal",
+    "prefecture": "Aurillac",
+    "sousPrefectures": [
+      "Mauriac",
+      "Saint-Flour"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "16",
+    "nom": "Charente",
+    "prefecture": "Angoulême",
+    "sousPrefectures": [
+      "Cognac",
+      "Confolens"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "17",
+    "nom": "Charente-Maritime",
+    "prefecture": "La Rochelle",
+    "sousPrefectures": [
+      "Jonzac",
+      "Rochefort",
+      "Saint-Jean-d’Angély",
+      "Saintes"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "18",
+    "nom": "Cher",
+    "prefecture": "Bourges",
+    "sousPrefectures": [
+      "Saint-Amand-Montrond",
+      "Vierzon"
+    ],
+    "region": "Centre-Val de Loire"
+  },
+  {
+    "code": "19",
+    "nom": "Corrèze",
+    "prefecture": "Tulle",
+    "sousPrefectures": [
+      "Brive-la-Gaillarde",
+      "Ussel"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "21",
+    "nom": "Côte-d'Or",
+    "prefecture": "Dijon",
+    "sousPrefectures": [
+      "Beaune",
+      "Montbard"
+    ],
+    "region": "Bourgogne-Franche-Comté"
+  },
+  {
+    "code": "22",
+    "nom": "Côtes-d'Armor",
+    "prefecture": "Saint-Brieuc",
+    "sousPrefectures": [
+      "Dinan",
+      "Guingamp",
+      "Lannion"
+    ],
+    "region": "Bretagne"
+  },
+  {
+    "code": "23",
+    "nom": "Creuse",
+    "prefecture": "Guéret",
+    "sousPrefectures": [
+      "Aubusson"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "24",
+    "nom": "Dordogne",
+    "prefecture": "Périgueux",
+    "sousPrefectures": [
+      "Bergerac",
+      "Nontron",
+      "Sarlat-la-Canéda"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "25",
+    "nom": "Doubs",
+    "prefecture": "Besançon",
+    "sousPrefectures": [
+      "Montbéliard",
+      "Pontarlier"
+    ],
+    "region": "Bourgogne-Franche-Comté"
+  },
+  {
+    "code": "26",
+    "nom": "Drôme",
+    "prefecture": "Valence",
+    "sousPrefectures": [
+      "Die",
+      "Nyons"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "27",
+    "nom": "Eure",
+    "prefecture": "Évreux",
+    "sousPrefectures": [
+      "Bernay",
+      "Les Andelys"
+    ],
+    "region": "Normandie"
+  },
+  {
+    "code": "28",
+    "nom": "Eure-et-Loir",
+    "prefecture": "Chartres",
+    "sousPrefectures": [
+      "Châteaudun",
+      "Dreux",
+      "Nogent-le-Rotrou"
+    ],
+    "region": "Centre-Val de Loire"
+  },
+  {
+    "code": "29",
+    "nom": "Finistère",
+    "prefecture": "Quimper",
+    "sousPrefectures": [
+      "Brest",
+      "Châteaulin",
+      "Morlaix"
+    ],
+    "region": "Bretagne"
+  },
+  {
+    "code": "2A",
+    "nom": "Corse-du-Sud",
+    "prefecture": "Ajaccio",
+    "sousPrefectures": [
+      "Sartène"
+    ],
+    "region": "Corse"
+  },
+  {
+    "code": "2B",
+    "nom": "Haute-Corse",
+    "prefecture": "Bastia",
+    "sousPrefectures": [
+      "Calvi",
+      "Corte"
+    ],
+    "region": "Corse"
+  },
+  {
+    "code": "30",
+    "nom": "Gard",
+    "prefecture": "Nîmes",
+    "sousPrefectures": [
+      "Alès",
+      "Le Vigan"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "31",
+    "nom": "Haute-Garonne",
+    "prefecture": "Toulouse",
+    "sousPrefectures": [
+      "Muret",
+      "Saint-Gaudens"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "32",
+    "nom": "Gers",
+    "prefecture": "Auch",
+    "sousPrefectures": [
+      "Condom",
+      "Mirande"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "33",
+    "nom": "Gironde",
+    "prefecture": "Bordeaux",
+    "sousPrefectures": [
+      "Arcachon",
+      "Blaye",
+      "Langon",
+      "Lesparre-Médoc",
+      "Libourne"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "34",
+    "nom": "Hérault",
+    "prefecture": "Montpellier",
+    "sousPrefectures": [
+      "Béziers",
+      "Lodève"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "35",
+    "nom": "Ille-et-Vilaine",
+    "prefecture": "Rennes",
+    "sousPrefectures": [
+      "Fougères",
+      "Redon",
+      "Saint-Malo"
+    ],
+    "region": "Bretagne"
+  },
+  {
+    "code": "36",
+    "nom": "Indre",
+    "prefecture": "Châteauroux",
+    "sousPrefectures": [
+      "Issoudun",
+      "La Châtre",
+      "Le Blanc"
+    ],
+    "region": "Centre-Val de Loire"
+  },
+  {
+    "code": "37",
+    "nom": "Indre-et-Loire",
+    "prefecture": "Tours",
+    "sousPrefectures": [
+      "Chinon",
+      "Loches"
+    ],
+    "region": "Centre-Val de Loire"
+  },
+  {
+    "code": "38",
+    "nom": "Isère",
+    "prefecture": "Grenoble",
+    "sousPrefectures": [
+      "La Tour-du-Pin",
+      "Vienne"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "39",
+    "nom": "Jura",
+    "prefecture": "Lons-le-Saunier",
+    "sousPrefectures": [
+      "Dole",
+      "Saint-Claude"
+    ],
+    "region": "Bourgogne-Franche-Comté"
+  },
+  {
+    "code": "40",
+    "nom": "Landes",
+    "prefecture": "Mont-de-Marsan",
+    "sousPrefectures": [
+      "Dax"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "41",
+    "nom": "Loir-et-Cher",
+    "prefecture": "Blois",
+    "sousPrefectures": [
+      "Romorantin-Lanthenay",
+      "Vendôme"
+    ],
+    "region": "Centre-Val de Loire"
+  },
+  {
+    "code": "42",
+    "nom": "Loire",
+    "prefecture": "Saint-Étienne",
+    "sousPrefectures": [
+      "Montbrison",
+      "Roanne"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "43",
+    "nom": "Haute-Loire",
+    "prefecture": "Le Puy-en-Velay",
+    "sousPrefectures": [
+      "Brioude",
+      "Yssingeaux"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "44",
+    "nom": "Loire-Atlantique",
+    "prefecture": "Nantes",
+    "sousPrefectures": [
+      "Châteaubriant",
+      "Saint-Nazaire"
+    ],
+    "region": "Pays de la Loire"
+  },
+  {
+    "code": "45",
+    "nom": "Loiret",
+    "prefecture": "Orléans",
+    "sousPrefectures": [
+      "Montargis",
+      "Pithiviers"
+    ],
+    "region": "Centre-Val de Loire"
+  },
+  {
+    "code": "46",
+    "nom": "Lot",
+    "prefecture": "Cahors",
+    "sousPrefectures": [
+      "Figeac",
+      "Gourdon"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "47",
+    "nom": "Lot-et-Garonne",
+    "prefecture": "Agen",
+    "sousPrefectures": [
+      "Marmande",
+      "Nérac",
+      "Villeneuve-sur-Lot"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "48",
+    "nom": "Lozère",
+    "prefecture": "Mende",
+    "sousPrefectures": [
+      "Florac-Trois-Rivières"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "49",
+    "nom": "Maine-et-Loire",
+    "prefecture": "Angers",
+    "sousPrefectures": [
+      "Cholet",
+      "Saumur",
+      "Segré-en-Anjou Bleu"
+    ],
+    "region": "Pays de la Loire"
+  },
+  {
+    "code": "50",
+    "nom": "Manche",
+    "prefecture": "Saint-Lô",
+    "sousPrefectures": [
+      "Avranches",
+      "Cherbourg-Octeville",
+      "Coutances"
+    ],
+    "region": "Normandie"
+  },
+  {
+    "code": "51",
+    "nom": "Marne",
+    "prefecture": "Châlons-en-Champagne",
+    "sousPrefectures": [
+      "Épernay",
+      "Reims",
+      "Sainte-Ménehould",
+      "Vitry-le-François"
+    ],
+    "region": "Grand Est"
+  },
+  {
+    "code": "52",
+    "nom": "Haute-Marne",
+    "prefecture": "Chaumont",
+    "sousPrefectures": [
+      "Langres",
+      "Saint-Dizier"
+    ],
+    "region": "Grand Est"
+  },
+  {
+    "code": "53",
+    "nom": "Mayenne",
+    "prefecture": "Laval",
+    "sousPrefectures": [
+      "Château-Gontier",
+      "Mayenne"
+    ],
+    "region": "Pays de la Loire"
+  },
+  {
+    "code": "54",
+    "nom": "Meurthe-et-Moselle",
+    "prefecture": "Nancy",
+    "sousPrefectures": [
+      "Briey",
+      "Lunéville",
+      "Toul"
+    ],
+    "region": "Grand Est"
+  },
+  {
+    "code": "55",
+    "nom": "Meuse",
+    "prefecture": "Bar-le-Duc",
+    "sousPrefectures": [
+      "Commercy",
+      "Verdun"
+    ],
+    "region": "Grand Est"
+  },
+  {
+    "code": "56",
+    "nom": "Morbihan",
+    "prefecture": "Vannes",
+    "sousPrefectures": [
+      "Lorient",
+      "Pontivy"
+    ],
+    "region": "Bretagne"
+  },
+  {
+    "code": "57",
+    "nom": "Moselle",
+    "prefecture": "Metz",
+    "sousPrefectures": [
+      "Forbach",
+      "Sarrebourg",
+      "Sarreguemines",
+      "Thionville"
+    ],
+    "region": "Grand Est"
+  },
+  {
+    "code": "58",
+    "nom": "Nièvre",
+    "prefecture": "Nevers",
+    "sousPrefectures": [
+      "Château-Chinon (Ville)",
+      "Clamecy",
+      "Cosne-Cours-sur-Loire"
+    ],
+    "region": "Bourgogne-Franche-Comté"
+  },
+  {
+    "code": "59",
+    "nom": "Nord",
+    "prefecture": "Lille",
+    "sousPrefectures": [
+      "Avesnes-sur-Helpe",
+      "Cambrai",
+      "Douai",
+      "Dunkerque",
+      "Valenciennes"
+    ],
+    "region": "Hauts-de-France"
+  },
+  {
+    "code": "60",
+    "nom": "Oise",
+    "prefecture": "Beauvais",
+    "sousPrefectures": [
+      "Clermont",
+      "Compiègne",
+      "Senlis"
+    ],
+    "region": "Hauts-de-France"
+  },
+  {
+    "code": "61",
+    "nom": "Orne",
+    "prefecture": "Alençon",
+    "sousPrefectures": [
+      "Argentan",
+      "Mortagne-au-Perche"
+    ],
+    "region": "Normandie"
+  },
+  {
+    "code": "62",
+    "nom": "Pas-de-Calais",
+    "prefecture": "Arras",
+    "sousPrefectures": [
+      "Béthune",
+      "Boulogne-sur-Mer",
+      "Calais",
+      "Lens",
+      "Montreuil-sur-Mer",
+      "Saint-Omer"
+    ],
+    "region": "Hauts-de-France"
+  },
+  {
+    "code": "63",
+    "nom": "Puy-de-Dôme",
+    "prefecture": "Clermont-Ferrand",
+    "sousPrefectures": [
+      "Ambert",
+      "Issoire",
+      "Riom",
+      "Thiers"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "64",
+    "nom": "Pyrénées-Atlantiques",
+    "prefecture": "Pau",
+    "sousPrefectures": [
+      "Bayonne",
+      "Oloron-Sainte-Marie"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "65",
+    "nom": "Hautes-Pyrénées",
+    "prefecture": "Tarbes",
+    "sousPrefectures": [
+      "Argelès-Gazost",
+      "Bagnères-de-Bigorre"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "66",
+    "nom": "Pyrénées-Orientales",
+    "prefecture": "Perpignan",
+    "sousPrefectures": [
+      "Céret",
+      "Prades"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "67",
+    "nom": "Bas-Rhin",
+    "prefecture": "Strasbourg",
+    "sousPrefectures": [
+      "Haguenau",
+      "Molsheim",
+      "Saverne",
+      "Sélestat"
+    ],
+    "region": "Grand Est"
+  },
+  {
+    "code": "68",
+    "nom": "Haut-Rhin",
+    "prefecture": "Colmar",
+    "sousPrefectures": [
+      "Altkirch",
+      "Mulhouse",
+      "Thann"
+    ],
+    "region": "Grand Est"
+  },
+  {
+    "code": "69",
+    "nom": "Rhône",
+    "prefecture": "Lyon",
+    "sousPrefectures": [
+      "Villefranche-sur-Saône"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "70",
+    "nom": "Haute-Saône",
+    "prefecture": "Vesoul",
+    "sousPrefectures": [
+      "Lure"
+    ],
+    "region": "Bourgogne-Franche-Comté"
+  },
+  {
+    "code": "71",
+    "nom": "Saône-et-Loire",
+    "prefecture": "Mâcon",
+    "sousPrefectures": [
+      "Autun",
+      "Chalon-sur-Saône",
+      "Charolles",
+      "Louhans"
+    ],
+    "region": "Bourgogne-Franche-Comté"
+  },
+  {
+    "code": "72",
+    "nom": "Sarthe",
+    "prefecture": "Le Mans",
+    "sousPrefectures": [
+      "La Flèche",
+      "Mamers"
+    ],
+    "region": "Pays de la Loire"
+  },
+  {
+    "code": "73",
+    "nom": "Savoie",
+    "prefecture": "Chambéry",
+    "sousPrefectures": [
+      "Albertville",
+      "Saint-Jean-de-Maurienne"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "74",
+    "nom": "Haute-Savoie",
+    "prefecture": "Annecy",
+    "sousPrefectures": [
+      "Bonneville",
+      "Saint-Julien-en-Genevois",
+      "Thonon-les-Bains"
+    ],
+    "region": "Auvergne-Rhône-Alpes"
+  },
+  {
+    "code": "75",
+    "nom": "Paris",
+    "prefecture": "Paris",
+    "sousPrefectures": [],
+    "region": "Île-de-France"
+  },
+  {
+    "code": "76",
+    "nom": "Seine-Maritime",
+    "prefecture": "Rouen",
+    "sousPrefectures": [
+      "Dieppe",
+      "Le Havre"
+    ],
+    "region": "Normandie"
+  },
+  {
+    "code": "77",
+    "nom": "Seine-et-Marne",
+    "prefecture": "Melun",
+    "sousPrefectures": [
+      "Fontainebleau",
+      "Meaux",
+      "Provins",
+      "Torcy"
+    ],
+    "region": "Île-de-France"
+  },
+  {
+    "code": "78",
+    "nom": "Yvelines",
+    "prefecture": "Versailles",
+    "sousPrefectures": [
+      "Mantes-la-Jolie",
+      "Rambouillet",
+      "Saint-Germain-en-Laye"
+    ],
+    "region": "Île-de-France"
+  },
+  {
+    "code": "79",
+    "nom": "Deux-Sèvres",
+    "prefecture": "Niort",
+    "sousPrefectures": [
+      "Bressuire",
+      "Parthenay"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "80",
+    "nom": "Somme",
+    "prefecture": "Amiens",
+    "sousPrefectures": [
+      "Abbeville",
+      "Montdidier",
+      "Péronne"
+    ],
+    "region": "Hauts-de-France"
+  },
+  {
+    "code": "81",
+    "nom": "Tarn",
+    "prefecture": "Albi",
+    "sousPrefectures": [
+      "Castres"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "82",
+    "nom": "Tarn-et-Garonne",
+    "prefecture": "Montauban",
+    "sousPrefectures": [
+      "Castelsarrasin"
+    ],
+    "region": "Occitanie"
+  },
+  {
+    "code": "83",
+    "nom": "Var",
+    "prefecture": "Toulon",
+    "sousPrefectures": [
+      "Brignoles",
+      "Draguignan"
+    ],
+    "region": "Provence-Alpes-Côte d'Azur"
+  },
+  {
+    "code": "84",
+    "nom": "Vaucluse",
+    "prefecture": "Avignon",
+    "sousPrefectures": [
+      "Apt",
+      "Carpentras"
+    ],
+    "region": "Provence-Alpes-Côte d'Azur"
+  },
+  {
+    "code": "85",
+    "nom": "Vendée",
+    "prefecture": "La Roche-sur-Yon",
+    "sousPrefectures": [
+      "Fontenay-le-Comte",
+      "Les Sables-d’Olonne"
+    ],
+    "region": "Pays de la Loire"
+  },
+  {
+    "code": "86",
+    "nom": "Vienne",
+    "prefecture": "Poitiers",
+    "sousPrefectures": [
+      "Châtellerault",
+      "Montmorillon"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "87",
+    "nom": "Haute-Vienne",
+    "prefecture": "Limoges",
+    "sousPrefectures": [
+      "Bellac",
+      "Rochechouart"
+    ],
+    "region": "Nouvelle-Aquitaine"
+  },
+  {
+    "code": "88",
+    "nom": "Vosges",
+    "prefecture": "Épinal",
+    "sousPrefectures": [
+      "Neufchâteau",
+      "Saint-Dié-des-Vosges"
+    ],
+    "region": "Grand Est"
+  },
+  {
+    "code": "89",
+    "nom": "Yonne",
+    "prefecture": "Auxerre",
+    "sousPrefectures": [
+      "Avallon",
+      "Sens"
+    ],
+    "region": "Bourgogne-Franche-Comté"
+  },
+  {
+    "code": "90",
+    "nom": "Territoire de Belfort",
+    "prefecture": "Belfort",
+    "sousPrefectures": [],
+    "region": "Bourgogne-Franche-Comté"
+  },
+  {
+    "code": "91",
+    "nom": "Essonne",
+    "prefecture": "Évry",
+    "sousPrefectures": [
+      "Étampes",
+      "Palaiseau"
+    ],
+    "region": "Île-de-France"
+  },
+  {
+    "code": "92",
+    "nom": "Hauts-de-Seine",
+    "prefecture": "Nanterre",
+    "sousPrefectures": [
+      "Antony",
+      "Boulogne-Billancourt"
+    ],
+    "region": "Île-de-France"
+  },
+  {
+    "code": "93",
+    "nom": "Seine-Saint-Denis",
+    "prefecture": "Bobigny",
+    "sousPrefectures": [
+      "Le Raincy",
+      "Saint-Denis"
+    ],
+    "region": "Île-de-France"
+  },
+  {
+    "code": "94",
+    "nom": "Val-de-Marne",
+    "prefecture": "Créteil",
+    "sousPrefectures": [
+      "L'Haÿ-les-Roses",
+      "Nogent-sur-Marne"
+    ],
+    "region": "Île-de-France"
+  },
+  {
+    "code": "95",
+    "nom": "Val-d'Oise",
+    "prefecture": "Cergy",
+    "sousPrefectures": [
+      "Argenteuil",
+      "Pontoise",
+      "Sarcelles"
+    ],
+    "region": "Île-de-France"
+  },
+  {
+    "code": "971",
+    "nom": "Guadeloupe",
+    "prefecture": "Basse-Terre",
+    "sousPrefectures": [
+      "Pointe-à-Pitre"
+    ],
+    "region": "Guadeloupe"
+  },
+  {
+    "code": "972",
+    "nom": "Martinique",
+    "prefecture": "Fort-de-France",
+    "sousPrefectures": [
+      "La Trinité",
+      "Le Marin",
+      "Saint-Pierre"
+    ],
+    "region": "Martinique"
+  },
+  {
+    "code": "973",
+    "nom": "Guyane",
+    "prefecture": "Cayenne",
+    "sousPrefectures": [
+      "Saint-Laurent-du-Maroni"
+    ],
+    "region": "Guyane"
+  },
+  {
+    "code": "974",
+    "nom": "La Réunion",
+    "prefecture": "Saint-Denis",
+    "sousPrefectures": [
+      "Saint-Benoît",
+      "Saint-Paul",
+      "Saint-Pierre"
+    ],
+    "region": "La Réunion"
+  },
+  {
+    "code": "976",
+    "nom": "Mayotte",
+    "prefecture": "Mamoudzou",
+    "sousPrefectures": [],
+    "region": "Mayotte"
+  }
+]

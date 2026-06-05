@@ -1,0 +1,102 @@
+Code;Département;Préfecture;Sous-Préfectures
+01;Ain;Bourg-en-Bresse;Belley, Gex, Nantua
+02;Aisne;Laon;Château-Thierry, Saint-Quentin, Soissons, Vervins
+03;Allier;Moulins;Montluçon, Vichy
+04;Alpes-de-Haute-Provence;Digne-les-Bains;Barcelonnette, Castellane, Forcalquier
+05;Hautes-Alpes;Gap;Briançon
+06;Alpes-Maritimes;Nice;Grasse
+07;Ardèche;Privas;Largentière, Tournon-sur-Rhône
+08;Ardennes;Charleville-Mézières;Rethel, Sedan, Vouziers
+09;Ariège;Foix;Pamiers, Saint-Girons
+10;Aube;Troyes;Bar-sur-Aube, Nogent-sur-Seine
+11;Aude;Carcassonne;Limoux, Narbonne
+12;Aveyron;Rodez;Millau, Villefranche-de-Rouergue
+13;Bouches-du-Rhône;Marseille;Aix-en-Provence, Arles, Istres
+14;Calvados;Caen;Bayeux, Lisieux, Vire
+15;Cantal;Aurillac;Mauriac, Saint-Flour
+16;Charente;Angoulême;Cognac, Confolens
+17;Charente-Maritime;La Rochelle;Jonzac, Rochefort, Saint-Jean-d’Angély, Saintes
+18;Cher;Bourges;Saint-Amand-Montrond, Vierzon
+19;Corrèze;Tulle;Brive-la-Gaillarde, Ussel
+21;Côte-d'Or;Dijon;Beaune, Montbard
+22;Côtes-d'Armor;Saint-Brieuc;Dinan, Guingamp, Lannion
+23;Creuse;Guéret;Aubusson
+24;Dordogne;Périgueux;Bergerac, Nontron, Sarlat-la-Canéda
+25;Doubs;Besançon;Montbéliard, Pontarlier
+26;Drôme;Valence;Die, Nyons
+27;Eure;Évreux;Bernay, Les Andelys
+28;Eure-et-Loir;Chartres;Châteaudun, Dreux, Nogent-le-Rotrou
+29;Finistère;Quimper;Brest, Châteaulin, Morlaix
+2A;Corse-du-Sud;Ajaccio;Sartène
+2B;Haute-Corse;Bastia;Calvi, Corte
+30;Gard;Nîmes;Alès, Le Vigan
+31;Haute-Garonne;Toulouse;Muret, Saint-Gaudens
+32;Gers;Auch;Condom, Mirande
+33;Gironde;Bordeaux;Arcachon, Blaye, Langon, Lesparre-Médoc, Libourne
+34;Hérault;Montpellier;Béziers, Lodève
+35;Ille-et-Vilaine;Rennes;Fougères, Redon, Saint-Malo
+36;Indre;Châteauroux;Issoudun, La Châtre, Le Blanc
+37;Indre-et-Loire;Tours;Chinon, Loches
+38;Isère;Grenoble;La Tour-du-Pin, Vienne
+39;Jura;Lons-le-Saunier;Dole, Saint-Claude
+40;Landes;Mont-de-Marsan;Dax
+41;Loir-et-Cher;Blois;Romorantin-Lanthenay, Vendôme
+42;Loire;Saint-Étienne;Montbrison, Roanne
+43;Haute-Loire;Le Puy-en-Velay;Brioude, Yssingeaux
+44;Loire-Atlantique;Nantes;Châteaubriant, Saint-Nazaire
+45;Loiret;Orléans;Montargis, Pithiviers
+46;Lot;Cahors;Figeac, Gourdon
+47;Lot-et-Garonne;Agen;Marmande, Nérac, Villeneuve-sur-Lot
+48;Lozère;Mende;Florac-Trois-Rivières
+49;Maine-et-Loire;Angers;Cholet, Saumur, Segré-en-Anjou Bleu
+50;Manche;Saint-Lô;Avranches, Cherbourg-Octeville, Coutances
+51;Marne;Châlons-en-Champagne;Épernay, Reims, Sainte-Ménehould, Vitry-le-François
+52;Haute-Marne;Chaumont;Langres, Saint-Dizier
+53;Mayenne;Laval;Château-Gontier, Mayenne
+54;Meurthe-et-Moselle;Nancy;Briey, Lunéville, Toul
+55;Meuse;Bar-le-Duc;Commercy, Verdun
+56;Morbihan;Vannes;Lorient, Pontivy
+57;Moselle;Metz;Forbach, Sarrebourg, Sarreguemines, Thionville
+58;Nièvre;Nevers;Château-Chinon (Ville), Clamecy, Cosne-Cours-sur-Loire
+59;Nord;Lille;Avesnes-sur-Helpe, Cambrai, Douai, Dunkerque, Valenciennes
+60;Oise;Beauvais;Clermont, Compiègne, Senlis
+61;Orne;Alençon;Argentan, Mortagne-au-Perche
+62;Pas-de-Calais;Arras;Béthune, Boulogne-sur-Mer, Calais, Lens, Montreuil-sur-Mer, Saint-Omer
+63;Puy-de-Dôme;Clermont-Ferrand;Ambert, Issoire, Riom, Thiers
+64;Pyrénées-Atlantiques;Pau;Bayonne, Oloron-Sainte-Marie
+65;Hautes-Pyrénées;Tarbes;Argelès-Gazost, Bagnères-de-Bigorre
+66;Pyrénées-Orientales;Perpignan;Céret, Prades
+67;Bas-Rhin;Strasbourg;Haguenau, Molsheim, Saverne, Sélestat
+68;Haut-Rhin;Colmar;Altkirch, Mulhouse, Thann
+69;Rhône;Lyon;Villefranche-sur-Saône
+70;Haute-Saône;Vesoul;Lure
+71;Saône-et-Loire;Mâcon;Autun, Chalon-sur-Saône, Charolles, Louhans
+72;Sarthe;Le Mans;La Flèche, Mamers
+73;Savoie;Chambéry;Albertville, Saint-Jean-de-Maurienne
+74;Haute-Savoie;Annecy;Bonneville, Saint-Julien-en-Genevois, Thonon-les-Bains
+75;Paris;Paris;
+76;Seine-Maritime;Rouen;Dieppe, Le Havre
+77;Seine-et-Marne;Melun;Fontainebleau, Meaux, Provins, Torcy
+78;Yvelines;Versailles;Mantes-la-Jolie, Rambouillet, Saint-Germain-en-Laye
+79;Deux-Sèvres;Niort;Bressuire, Parthenay
+80;Somme;Amiens;Abbeville, Montdidier, Péronne
+81;Tarn;Albi;Castres
+82;Tarn-et-Garonne;Montauban;Castelsarrasin
+83;Var;Toulon;Brignoles, Draguignan
+84;Vaucluse;Avignon;Apt, Carpentras
+85;Vendée;La Roche-sur-Yon;Fontenay-le-Comte, Les Sables-d’Olonne
+86;Vienne;Poitiers;Châtellerault, Montmorillon
+87;Haute-Vienne;Limoges;Bellac, Rochechouart
+88;Vosges;Épinal;Neufchâteau, Saint-Dié-des-Vosges
+89;Yonne;Auxerre;Avallon, Sens
+90;Territoire de Belfort;Belfort;
+91;Essonne;Évry;Étampes, Palaiseau
+92;Hauts-de-Seine;Nanterre;Antony, Boulogne-Billancourt
+93;Seine-Saint-Denis;Bobigny;Le Raincy, Saint-Denis
+94;Val-de-Marne;Créteil;L'Haÿ-les-Roses, Nogent-sur-Marne
+95;Val-d'Oise;Cergy;Argenteuil, Pontoise, Sarcelles
+971;Guadeloupe;Basse-Terre;Pointe-à-Pitre
+972;Martinique;Fort-de-France;La Trinité, Le Marin, Saint-Pierre
+973;Guyane;Cayenne;Saint-Laurent-du-Maroni
+974;La Réunion;Saint-Denis;Saint-Benoît, Saint-Paul, Saint-Pierre
+976;Mayotte;Mamoudzou;
