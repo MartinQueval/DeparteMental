@@ -7,6 +7,7 @@ import {
   type Departement,
 } from '../lib/departements.ts'
 import { getDaily, setDaily, recordAnswer, type DailyState } from '../lib/storage.ts'
+import { sfx } from '../lib/sound.ts'
 import {
   IconArrowDown,
   IconArrowUp,
@@ -102,6 +103,9 @@ export default function Daily() {
     const won = found.code === target.code
     const done = won || guesses.length >= MAX_GUESSES
     if (done) recordAnswer(target.code, won)
+    if (won) sfx.finish()
+    else if (done) sfx.wrong()
+    else sfx.click()
     const next: DailyState = { guesses, done, won }
     setState(next)
     setDaily(dateKey, next)

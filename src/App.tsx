@@ -1,20 +1,23 @@
 import { useState } from 'react'
 import Quiz from './modes/Quiz.tsx'
-import Flashcards from './modes/Flashcards.tsx'
+import Entrainement from './modes/Entrainement.tsx'
 import Daily from './modes/Daily.tsx'
 import Carte from './modes/Carte.tsx'
 import {
   IconZap,
-  IconLayers,
+  IconGraduationCap,
   IconCalendar,
   IconMap,
   IconFlag,
+  IconVolume,
+  IconVolumeOff,
   type IconComponent,
 } from './components/icons.tsx'
 import { departements } from './lib/departements.ts'
 import { load } from './lib/storage.ts'
+import { isMuted, sfx, toggleMuted } from './lib/sound.ts'
 
-type ModeId = 'quiz' | 'cards' | 'daily' | 'carte'
+type ModeId = 'quiz' | 'entrainement' | 'daily' | 'carte'
 type View = 'home' | ModeId
 
 interface ModeDef {
@@ -32,10 +35,10 @@ const MODES: ModeDef[] = [
     desc: '60 secondes, un max de bonnes réponses. Enchaîne pour le multiplicateur !',
   },
   {
-    id: 'cards',
-    icon: IconLayers,
-    title: 'Flashcards',
-    desc: 'Révision espacée : l’app insiste sur les départements que tu rates.',
+    id: 'entrainement',
+    icon: IconGraduationCap,
+    title: 'Entraînement',
+    desc: 'Choisis ton thème et révise-le à fond.',
   },
   {
     id: 'daily',
@@ -53,7 +56,7 @@ const MODES: ModeDef[] = [
 
 const MODE_COMPONENTS: Record<ModeId, () => React.JSX.Element | null> = {
   quiz: Quiz,
-  cards: Flashcards,
+  entrainement: Entrainement,
   daily: Daily,
   carte: Carte,
 }
@@ -74,6 +77,19 @@ function Progress() {
   )
 }
 
+function SoundToggle() {
+  const [muted, setMuted] = useState(isMuted())
+  return (
+    <button
+      className="sound-toggle"
+      aria-label={muted ? 'Activer le son' : 'Couper le son'}
+      onClick={() => setMuted(toggleMuted())}
+    >
+      {muted ? <IconVolumeOff /> : <IconVolume />}
+    </button>
+  )
+}
+
 export default function App() {
   const [view, setView] = useState<View>('home')
 
@@ -81,9 +97,10 @@ export default function App() {
     const Mode = MODE_COMPONENTS[view]
     return (
       <div className="app">
+        <SoundToggle />
         <div className="view" key={view}>
           <header className="mode-header">
-            <button className="btn-back" onClick={() => setView('home')}>← Menu</button>
+            <button className="btn-back" onClick={() => { sfx.click(); setView('home') }}>← Menu</button>
           </header>
           <Mode />
         </div>
@@ -93,6 +110,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <SoundToggle />
       <div className="view home" key="home">
         <header className="home-header">
           <h1>
@@ -105,7 +123,7 @@ export default function App() {
         <Progress />
         <main className="mode-grid">
           {MODES.map((m) => (
-            <button key={m.id} className="mode-card" onClick={() => setView(m.id)}>
+            <button key={m.id} className="mode-card" onClick={() => { sfx.start(); setView(m.id) }}>
               <span className="mode-icon"><m.icon /></span>
               <span className="mode-title">{m.title}</span>
               <span className="mode-desc">{m.desc}</span>

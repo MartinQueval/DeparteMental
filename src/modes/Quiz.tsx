@@ -8,6 +8,7 @@ import {
   type Departement,
 } from '../lib/departements.ts'
 import { recordAnswer, getBest, setBest, weakWeight } from '../lib/storage.ts'
+import { sfx } from '../lib/sound.ts'
 import {
   IconCheck,
   IconFlame,
@@ -115,6 +116,7 @@ export default function Quiz() {
       if (timeLeft <= 1) {
         setTimeLeft(0)
         setNewRecord(setBest('quiz', score))
+        sfx.finish()
         setPhase('done')
       } else {
         setTimeLeft((s) => s - 1)
@@ -124,6 +126,7 @@ export default function Quiz() {
   }, [phase, timeLeft, score])
 
   function start(mode: AnswerMode) {
+    sfx.start()
     setAnswerMode(mode)
     setScore(0)
     setStreak(0)
@@ -138,6 +141,8 @@ export default function Quiz() {
   function answer(ok: boolean) {
     if (!question) return
     recordAnswer(question.dept.code, ok)
+    if (ok) sfx.correct()
+    else sfx.wrong()
     setFeedback({ ok, answer: question.answer })
     if (ok) {
       setScore((s) => s + 10 * multiplier)
