@@ -18,10 +18,11 @@ import {
   IconType,
   IconX,
   IconZap,
+  IconHeart,
   type IconComponent,
 } from '../components/icons.tsx'
 
-const SESSION_SIZE = 10
+const LIVES = 10
 
 type ThemeId = 'prefecture' | 'souspref' | 'code' | 'nom' | 'region'
 
@@ -183,12 +184,19 @@ export default function Entrainement() {
   const [question, setQuestion] = useState<Question | null>(null)
   const [picked, setPicked] = useState<string | null>(null)
   const [results, setResults] = useState<Result[]>([])
+  const [finished, setFinished] = useState(false)
+
+  const lostLives = results.filter((r) => !r.ok).length
+  const livesLeft = Math.max(0, LIVES - lostLives)
+  // La vie est perdue dès la mauvaise réponse : on termine après l'avoir affichée.
+  const isLastLife = picked !== null && livesLeft <= 0
 
   function start(id: ThemeId) {
     setTheme(id)
     setIndex(0)
     setResults([])
     setPicked(null)
+    setFinished(false)
     setQuestion(makeQuestion(id))
   }
 
@@ -204,9 +212,9 @@ export default function Entrainement() {
 
   function next() {
     if (!theme) return
-    if (index + 1 >= SESSION_SIZE) {
+    if (isLastLife) {
       sfx.finish()
-      setIndex(SESSION_SIZE)
+      setFinished(true)
       return
     }
     sfx.click()
@@ -220,7 +228,7 @@ export default function Entrainement() {
     return (
       <div className="entrainement setup">
         <h2><IconGraduationCap /> Entraînement ciblé</h2>
-        <p>Choisis un thème et révise-le à fond. {SESSION_SIZE} questions par session.</p>
+        <p>Choisis un thème et révise-le à fond. Tu as {LIVES} vies : enchaîne les questions tant qu'il t'en reste.</p>
         <div className="theme-grid">
           {THEMES.map((t) => (
             <button key={t.id} className="theme-card" onClick={() => { sfx.start(); start(t.id) }}>
@@ -235,12 +243,13 @@ export default function Entrainement() {
   }
 
   // --- Récap ---
-  if (index >= SESSION_SIZE) {
+  if (finished) {
     const ok = results.filter((r) => r.ok).length
     return (
       <div className="entrainement done">
-        <h2>Session terminée <IconSparkle /></h2>
-        <p className="final-score">{ok} / {results.length}</p>
+        <h2>Plus de vies ! <IconSparkle /></h2>
+        <p className="final-score">{ok} bonnes réponses</p>
+        <p className="final-sub">{results.length} questions tentées</p>
         <ul className="recap">
           {results.map((r, i) => {
             const d = byCode[r.code]
@@ -264,7 +273,14 @@ export default function Entrainement() {
 
   return (
     <div className="entrainement play">
-      <p className="card-count">Question {index + 1} / {SESSION_SIZE}</p>
+      <div className="play-status">
+        <span className="card-count">Question {index + 1}</span>
+        <span className="lives" aria-label={`${livesLeft} vies restantes`}>
+          {Array.from({ length: LIVES }, (_, i) => (
+            <IconHeart key={i} className={i < livesLeft ? 'life' : 'life lost'} />
+          ))}
+        </span>
+      </div>
       <div className="question-card">
         <p className="prompt">{question.prompt}</p>
         <div className="choices">
@@ -289,7 +305,7 @@ export default function Entrainement() {
       </div>
       {picked && (
         <button className="btn-primary btn-next" onClick={next}>
-          {index + 1 >= SESSION_SIZE ? 'Voir le résultat' : 'Suivant →'}
+          {isLastLife ? 'Voir le résultat' : 'Suivant →'}
         </button>
       )}
     </div>
