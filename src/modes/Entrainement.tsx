@@ -188,8 +188,6 @@ export default function Entrainement() {
 
   const lostLives = results.filter((r) => !r.ok).length
   const livesLeft = Math.max(0, LIVES - lostLives)
-  // La vie est perdue dès la mauvaise réponse : on termine après l'avoir affichée.
-  const isLastLife = picked !== null && livesLeft <= 0
 
   function start(id: ThemeId) {
     setTheme(id)
@@ -201,26 +199,26 @@ export default function Entrainement() {
   }
 
   function choose(option: string) {
-    if (!question || picked) return
+    if (!question || picked || !theme) return
     const ok = option === question.answer
     recordAnswer(question.dept.code, ok)
     if (ok) sfx.correct()
     else sfx.wrong()
     setPicked(option)
     setResults((r) => [...r, { code: question.dept.code, ok }])
-  }
 
-  function next() {
-    if (!theme) return
-    if (isLastLife) {
-      sfx.finish()
-      setFinished(true)
-      return
-    }
-    sfx.click()
-    setIndex((i) => i + 1)
-    setPicked(null)
-    setQuestion(makeQuestion(theme))
+    // Passe à la carte suivante automatiquement, comme les autres modes.
+    const gameOver = lostLives + (ok ? 0 : 1) >= LIVES
+    setTimeout(() => {
+      if (gameOver) {
+        sfx.finish()
+        setFinished(true)
+        return
+      }
+      setIndex((i) => i + 1)
+      setPicked(null)
+      setQuestion(makeQuestion(theme))
+    }, ok ? 600 : 1100)
   }
 
   // --- Choix du thème ---
@@ -303,11 +301,6 @@ export default function Entrainement() {
           })}
         </div>
       </div>
-      {picked && (
-        <button className="btn-primary btn-next" onClick={next}>
-          {isLastLife ? 'Voir le résultat' : 'Suivant →'}
-        </button>
-      )}
     </div>
   )
 }
