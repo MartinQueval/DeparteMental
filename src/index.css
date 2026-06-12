@@ -389,6 +389,38 @@ input:focus {
   color: var(--muted);
 }
 
+.play-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  max-width: 480px;
+  flex-wrap: wrap;
+}
+
+.lives {
+  display: inline-flex;
+  gap: 0.15rem;
+  font-size: 1.15rem;
+}
+
+.lives .life {
+  color: #ff5d73;
+  fill: #ff5d73;
+}
+
+.lives .life.lost {
+  color: #49518a;
+  fill: none;
+  opacity: 0.5;
+}
+
+.final-sub {
+  color: var(--muted);
+  margin: 0;
+}
+
 .flashcard {
   width: 100%;
   max-width: 380px;
