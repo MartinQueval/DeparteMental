@@ -1,5 +1,24 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Icon, useCanopSound } from 'canopui'
+import { useEffect, useState, type FormEventHandler, type ReactNode } from 'react'
+import {
+  Button,
+  Card,
+  CardGrid,
+  Choice,
+  Heading,
+  Icon,
+  Input,
+  ProgressBar,
+  SegmentedControl,
+  Stack,
+  StatCard,
+  Streak,
+  Text,
+  useCanopSound,
+  useCountdown,
+  type CanopCardFlash,
+  type CanopChoiceState,
+  type CanopSegmentedControlOption,
+} from 'canopui'
 import {
   departements,
   distractors,
@@ -11,11 +30,15 @@ import {
 import { recordAnswer, getBest, setBest, weakWeight } from '../lib/storage.ts'
 
 const DURATION = 60
+const DURATION_MS = DURATION * 1000
+const URGENT_SECONDS = 10
+const HOLD_OK = 350
+const HOLD_KO = 1100
 
 type AnswerMode = 'qcm' | 'saisie'
 type Phase = 'setup' | 'play' | 'done'
 
-interface Choice {
+interface Option {
   label: string
   ok: boolean
 }
@@ -25,8 +48,23 @@ interface Question {
   prompt: ReactNode
   answer: string
   check: (input: string) => boolean
-  options?: Choice[]
+  options?: Option[]
 }
+
+interface Verdict {
+  ok: boolean
+  chosen?: string
+}
+
+interface Tally {
+  ok: number
+  ko: number
+}
+
+const ANSWER_MODES: CanopSegmentedControlOption<AnswerMode>[] = [
+  { value: 'qcm', label: 'QCM' },
+  { value: 'saisie', label: 'Saisie clavier' },
+]
 
 function pickWeighted(): Departement {
   const weights = departements.map((d) => weakWeight(d.code))
@@ -86,162 +124,381 @@ function makeQuestion(answerMode: AnswerMode): Question {
   return q
 }
 
+function choiceState(option: Option, verdict: Verdict | null): CanopChoiceState {
+  if (!verdict) return 'neutral'
+  if (option.ok) return 'correct'
+  return option.label === verdict.chosen ? 'incorrect' : 'neutral'
+}
+
+function cardFlash(verdict: Verdict | null): CanopCardFlash | undefined {
+  if (!verdict) return undefined
+  return verdict.ok ? 'success' : 'error'
+}
+
+interface BestLineProps {
+  best: number
+}
+
+function BestLine({ best }: BestLineProps) {
+  return (
+    <Stack direction="row" gap="xs" alignItems="center" justifyContent="center">
+      <Icon name="award" size="sm" color="warning" variant="solid" />
+      <Text variant="label" tone="muted" as="span">
+        Record : {best} pts
+      </Text>
+    </Stack>
+  )
+}
+
+interface SetupProps {
+  answerMode: AnswerMode
+  onAnswerModeChange: (mode: AnswerMode) => void
+  onStart: () => void
+}
+
+function Setup({ answerMode, onAnswerModeChange, onStart }: SetupProps) {
+  return (
+    <Stack gap="lg">
+      <Stack gap="xs" alignItems="center">
+        <Icon name="lightning" size="xl" color="primary" variant="solid" />
+        <Heading level={2} align="center" gutterBottom={false}>
+          Quiz éclair
+        </Heading>
+        <Text variant="lead" tone="muted" align="center">
+          {DURATION} secondes. Bonne réponse : +10 pts. Série de 3 : multiplicateur !
+        </Text>
+      </Stack>
+
+      <Card radius="xl">
+        <Stack gap="md" alignItems="center">
+          <Text variant="label" tone="muted" as="span">
+            Comment veux-tu répondre ?
+          </Text>
+          <SegmentedControl
+            options={ANSWER_MODES}
+            value={answerMode}
+            onChange={onAnswerModeChange}
+            ariaLabel="Mode de réponse"
+            fullWidth
+          />
+          <Button
+            size="large"
+            fullWidth
+            onClick={onStart}
+            startIcon={<Icon name="play" size="sm" variant="solid" />}
+          >
+            Commencer
+          </Button>
+        </Stack>
+      </Card>
+
+      <BestLine best={getBest('quiz')} />
+    </Stack>
+  )
+}
+
+interface HudProps {
+  remaining: number
+  seconds: number
+  score: number
+  streak: number
+  multiplier: number
+}
+
+function Hud({ remaining, seconds, score, streak, multiplier }: HudProps) {
+  const urgent = seconds <= URGENT_SECONDS
+
+  return (
+    <Stack gap="xs">
+      <Stack direction="row" gap="sm" alignItems="center" justifyContent="space-between">
+        <Stack direction="row" gap="xs" alignItems="center">
+          <Icon
+            name="timer"
+            size="sm"
+            variant={urgent ? 'solid' : 'outline'}
+            color={urgent ? 'error' : 'primary'}
+          />
+          <Text
+            variant="label"
+            weight="bold"
+            tone={urgent ? 'error' : 'default'}
+            tabularNums
+            as="span"
+          >
+            {seconds}s
+          </Text>
+        </Stack>
+        <Text variant="label" weight="bold" tabularNums as="span">
+          {score} pts
+        </Text>
+        <Streak
+          value={streak}
+          multiplier={multiplier}
+          ariaLabel={`Série de ${streak}, multiplicateur ${multiplier}`}
+        />
+      </Stack>
+      <ProgressBar
+        value={(remaining / DURATION_MS) * 100}
+        color={urgent ? 'error' : 'primary'}
+        ariaLabel={`${seconds} secondes restantes`}
+      />
+    </Stack>
+  )
+}
+
+interface ChoicesProps {
+  options: Option[]
+  verdict: Verdict | null
+  onAnswer: (option: Option) => void
+}
+
+function Choices({ options, verdict, onAnswer }: ChoicesProps) {
+  return (
+    <CardGrid minItemWidth="12rem" gap="sm">
+      {options.map((option) => {
+        const state = choiceState(option, verdict)
+        return (
+          <Choice
+            key={option.label}
+            state={state}
+            disabled={verdict !== null && state === 'neutral'}
+            onClick={() => onAnswer(option)}
+          >
+            <Text variant="body-md" as="span">
+              {option.label}
+            </Text>
+          </Choice>
+        )
+      })}
+    </CardGrid>
+  )
+}
+
+interface RevealProps {
+  answer: string
+}
+
+function Reveal({ answer }: RevealProps) {
+  return (
+    <Stack direction="row" gap="xs" alignItems="center" justifyContent="center">
+      <Icon name="close" size="sm" color="error" variant="solid" />
+      <Text variant="label" tone="error" weight="bold" as="span">
+        Réponse : {answer}
+      </Text>
+    </Stack>
+  )
+}
+
+interface TypedAnswerProps {
+  round: number
+  value: string
+  locked: boolean
+  onChange: (value: string) => void
+  onSubmit: FormEventHandler<HTMLFormElement>
+}
+
+function TypedAnswer({ round, value, locked, onChange, onSubmit }: TypedAnswerProps) {
+  return (
+    <Stack as="form" gap="sm" onSubmit={onSubmit}>
+      <Input
+        key={round}
+        label="Ta réponse"
+        value={value}
+        onChange={onChange}
+        disabled={locked}
+        autoFocus
+        autoComplete="off"
+      />
+      <Button
+        type="submit"
+        fullWidth
+        disabled={locked}
+        endIcon={<Icon name="arrowRight" size="sm" />}
+      >
+        Valider
+      </Button>
+    </Stack>
+  )
+}
+
+interface DoneProps {
+  score: number
+  count: Tally
+  newRecord: boolean
+  onReplay: () => void
+}
+
+function Done({ score, count, newRecord, onReplay }: DoneProps) {
+  return (
+    <Stack gap="lg">
+      <Stack gap="xs" alignItems="center">
+        <Icon
+          name={newRecord ? 'award' : 'timer'}
+          size="xl"
+          variant="solid"
+          color={newRecord ? 'warning' : 'primary'}
+        />
+        <Heading level={2} align="center" gutterBottom={false}>
+          {newRecord ? 'Nouveau record !' : 'Terminé !'}
+        </Heading>
+      </Stack>
+
+      <CardGrid minItemWidth="9rem" gap="sm">
+        <StatCard
+          label="Score"
+          value={`${score} pts`}
+          icon="lightning"
+          tone={newRecord ? 'success' : 'neutral'}
+        />
+        <StatCard label="Bonnes" value={`${count.ok}`} icon="check" iconColor="success" />
+        <StatCard label="Ratées" value={`${count.ko}`} icon="close" iconColor="error" />
+        <StatCard
+          label="Record"
+          value={`${getBest('quiz')} pts`}
+          icon="award"
+          iconColor="warning"
+        />
+      </CardGrid>
+
+      <Button
+        size="large"
+        fullWidth
+        onClick={onReplay}
+        startIcon={<Icon name="refresh" size="sm" />}
+      >
+        Rejouer
+      </Button>
+    </Stack>
+  )
+}
+
 export default function Quiz() {
   const [phase, setPhase] = useState<Phase>('setup')
   const [answerMode, setAnswerMode] = useState<AnswerMode>('qcm')
-  const [timeLeft, setTimeLeft] = useState(DURATION)
   const [score, setScore] = useState(0)
   const [streak, setStreak] = useState(0)
-  const [count, setCount] = useState({ ok: 0, ko: 0 })
+  const [count, setCount] = useState<Tally>({ ok: 0, ko: 0 })
   const [question, setQuestion] = useState<Question | null>(null)
-  const [feedback, setFeedback] = useState<{ ok: boolean; answer: string } | null>(null)
+  const [round, setRound] = useState(0)
+  const [verdict, setVerdict] = useState<Verdict | null>(null)
   const [input, setInput] = useState('')
   const [newRecord, setNewRecord] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
   const { play } = useCanopSound()
 
   const multiplier = 1 + Math.floor(streak / 3)
 
-  useEffect(() => {
-    if (phase !== 'play') return
-    const t = setTimeout(() => {
-      if (timeLeft <= 1) {
-        setTimeLeft(0)
-        setNewRecord(setBest('quiz', score))
-        play('finish')
-        setPhase('done')
-      } else {
-        setTimeLeft((s) => s - 1)
-      }
-    }, 1000)
-    return () => clearTimeout(t)
-  }, [phase, timeLeft, score, play])
+  const { seconds, remaining, restart } = useCountdown({
+    duration: DURATION_MS,
+    running: phase === 'play',
+    onEnd: () => {
+      setNewRecord(setBest('quiz', score))
+      play('finish')
+      setPhase('done')
+    },
+  })
 
-  function start(mode: AnswerMode) {
+  useEffect(() => {
+    if (!verdict) return
+    const id = window.setTimeout(
+      () => {
+        setVerdict(null)
+        setInput('')
+        setQuestion(makeQuestion(answerMode))
+        setRound((value) => value + 1)
+      },
+      verdict.ok ? HOLD_OK : HOLD_KO,
+    )
+    return () => window.clearTimeout(id)
+  }, [verdict, answerMode])
+
+  function start() {
     play('start')
-    setAnswerMode(mode)
     setScore(0)
     setStreak(0)
     setCount({ ok: 0, ko: 0 })
-    setTimeLeft(DURATION)
-    setFeedback(null)
+    setVerdict(null)
+    setInput('')
     setNewRecord(false)
-    setQuestion(makeQuestion(mode))
+    setQuestion(makeQuestion(answerMode))
+    setRound((value) => value + 1)
+    restart()
     setPhase('play')
   }
 
-  function answer(ok: boolean) {
-    if (!question) return
+  function answer(ok: boolean, chosen?: string) {
+    if (!question || verdict) return
     recordAnswer(question.dept.code, ok)
     play(ok ? 'correct' : 'wrong')
-    setFeedback({ ok, answer: question.answer })
+    setVerdict({ ok, chosen })
     if (ok) {
-      setScore((s) => s + 10 * multiplier)
-      setStreak((s) => s + 1)
-      setCount((c) => ({ ...c, ok: c.ok + 1 }))
+      setScore((value) => value + 10 * multiplier)
+      setStreak((value) => value + 1)
+      setCount((value) => ({ ...value, ok: value.ok + 1 }))
     } else {
       setStreak(0)
-      setCount((c) => ({ ...c, ko: c.ko + 1 }))
+      setCount((value) => ({ ...value, ko: value.ko + 1 }))
     }
-    setTimeout(() => {
-      setFeedback(null)
-      setInput('')
-      setQuestion(makeQuestion(answerMode))
-      inputRef.current?.focus()
-    }, ok ? 350 : 1100)
+  }
+
+  const submitTyped: FormEventHandler<HTMLFormElement> = (event) => {
+    event.preventDefault()
+    if (!question || verdict || !input.trim()) return
+    answer(question.check(input))
   }
 
   if (phase === 'setup') {
-    return (
-      <div className="quiz setup">
-        <h2><Icon name="lightning" size="sm" /> Quiz éclair</h2>
-        <p>{DURATION} secondes. Bonne réponse : +10 pts. Série de 3 : multiplicateur !</p>
-        <p className="best">Record : {getBest('quiz')} pts</p>
-        <div className="setup-buttons">
-          <button className="btn-primary" onClick={() => start('qcm')}>QCM (4 choix)</button>
-          <button className="btn-primary" onClick={() => start('saisie')}>
-            Saisie clavier
-          </button>
-        </div>
-      </div>
-    )
+    return <Setup answerMode={answerMode} onAnswerModeChange={setAnswerMode} onStart={start} />
   }
 
   if (phase === 'done') {
     return (
-      <div className="quiz done">
-        <h2>
-          {newRecord ? (
-            <><Icon name="award" size="sm" /> Nouveau record !</>
-          ) : (
-            <><Icon name="timer" size="sm" /> Terminé !</>
-          )}
-        </h2>
-        <p className="final-score">{score} pts</p>
-        <p>
-          <Icon name="check" size="sm" color="success" /> {count.ok} bonnes ·{' '}
-          <Icon name="close" size="sm" color="error" /> {count.ko} ratées
-        </p>
-        <p className="best">Record : {getBest('quiz')} pts</p>
-        <button className="btn-primary" onClick={() => setPhase('setup')}>Rejouer</button>
-      </div>
+      <Done
+        score={score}
+        count={count}
+        newRecord={newRecord}
+        onReplay={() => setPhase('setup')}
+      />
     )
   }
 
   if (!question) return null
 
   return (
-    <div className="quiz play">
-      <div className="hud">
-        <span className={`timer ${timeLeft <= 10 ? 'urgent' : ''}`}>
-          <Icon name="timer" size="sm" /> {timeLeft}s
-        </span>
-        <span className="score">{score} pts</span>
-        <span className={`streak ${multiplier > 1 ? 'hot' : ''}`}>
-          <Icon name="fire" size="sm" /> {streak} {multiplier > 1 && `(×${multiplier})`}
-        </span>
-      </div>
+    <Stack gap="md">
+      <Hud
+        remaining={remaining}
+        seconds={seconds}
+        score={score}
+        streak={streak}
+        multiplier={multiplier}
+      />
 
-      <div className={`question-card ${feedback ? (feedback.ok ? 'flash-ok' : 'flash-ko') : ''}`}>
-        <p className="prompt">{question.prompt}</p>
+      <Card radius="xl" elevation="md" flash={cardFlash(verdict)}>
+        <Stack gap="lg">
+          <Text variant="lead" align="center">
+            {question.prompt}
+          </Text>
 
-        {feedback && !feedback.ok && (
-          <p className="reveal">Réponse : <strong>{feedback.answer}</strong></p>
-        )}
-
-        {answerMode === 'qcm' && question.options ? (
-          <div className="choices">
-            {question.options.map((c) => (
-              <button
-                key={c.label}
-                className="btn-choice"
-                disabled={!!feedback}
-                onClick={() => answer(c.ok)}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (input.trim() && !feedback) answer(question.check(input))
-            }}
-          >
-            <input
-              ref={inputRef}
-              autoFocus
-              value={input}
-              disabled={!!feedback}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ta réponse…"
-              autoComplete="off"
+          {answerMode === 'qcm' && question.options ? (
+            <Choices
+              options={question.options}
+              verdict={verdict}
+              onAnswer={(option) => answer(option.ok, option.label)}
             />
-            <button className="btn-primary" disabled={!!feedback}>Valider</button>
-          </form>
-        )}
-      </div>
-    </div>
+          ) : (
+            <Stack gap="sm">
+              {verdict && !verdict.ok && <Reveal answer={question.answer} />}
+              <TypedAnswer
+                round={round}
+                value={input}
+                locked={verdict !== null}
+                onChange={setInput}
+                onSubmit={submitTyped}
+              />
+            </Stack>
+          )}
+        </Stack>
+      </Card>
+    </Stack>
   )
 }

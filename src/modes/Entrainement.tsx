@@ -1,5 +1,20 @@
 import { useState } from 'react'
-import { Icon, Lives, useCanopSound, type CanopIconName } from 'canopui'
+import {
+  Button,
+  Card,
+  CardGrid,
+  Choice,
+  Heading,
+  Icon,
+  Lives,
+  Pressable,
+  Stack,
+  Text,
+  useCanopSound,
+  type CanopCardFlash,
+  type CanopChoiceState,
+  type CanopIconName,
+} from 'canopui'
 import {
   byCode,
   departements,
@@ -36,19 +51,19 @@ const THEMES: Theme[] = [
   },
   {
     id: 'code',
-    icon: 'pencil',
+    icon: 'tag',
     title: 'Codes',
     desc: 'Associe chaque département à son numéro.',
   },
   {
     id: 'nom',
-    icon: 'lightning',
+    icon: 'pencil',
     title: 'Noms',
     desc: 'Quel département se cache derrière ce numéro ?',
   },
   {
     id: 'region',
-    icon: 'location',
+    icon: 'mapLocation',
     title: 'Régions',
     desc: 'Dans quelle région se trouve le département ?',
   },
@@ -148,7 +163,6 @@ function makeQuestion(theme: ThemeId): Question {
     }
   }
 
-  // region
   return {
     dept,
     prompt: `Dans quelle région se trouve ${dept.nom} (${dept.code}) ?`,
@@ -166,6 +180,172 @@ interface Result {
   ok: boolean
 }
 
+function choiceState(option: string, answer: string, picked: string | null): CanopChoiceState {
+  if (!picked) return 'neutral'
+  if (option === answer) return 'correct'
+  if (option === picked) return 'incorrect'
+  return 'neutral'
+}
+
+interface ThemePickerProps {
+  onPick: (id: ThemeId) => void
+}
+
+function ThemePicker({ onPick }: ThemePickerProps) {
+  return (
+    <Stack gap="lg" alignItems="stretch">
+      <Stack gap="xs" alignItems="center">
+        <Stack direction="row" gap="sm" alignItems="center">
+          <Icon name="university" variant="solid" size="md" color="primary" />
+          <Heading level={2} align="center" gutterBottom={false}>
+            Entraînement ciblé
+          </Heading>
+        </Stack>
+        <Text variant="lead" tone="muted" align="center">
+          Choisis un thème et révise-le à fond. Tu as {LIVES} vies : enchaîne les questions tant
+          qu'il t'en reste.
+        </Text>
+        <Lives value={LIVES} max={LIVES} ariaLabel={`${LIVES} vies au départ`} />
+      </Stack>
+
+      <CardGrid minItemWidth="15rem" gap="md">
+        {THEMES.map((t) => (
+          <Pressable
+            key={t.id}
+            onClick={() => onPick(t.id)}
+            padding="lg"
+            fullWidth
+            ariaLabel={t.title}
+          >
+            <Stack gap="sm" alignItems="start">
+              <Icon name={t.icon} variant="solid" size="lg" color="primary" />
+              <Heading level={3} size={4} gutterBottom={false}>
+                {t.title}
+              </Heading>
+              <Text variant="body-sm" tone="muted">
+                {t.desc}
+              </Text>
+            </Stack>
+          </Pressable>
+        ))}
+      </CardGrid>
+    </Stack>
+  )
+}
+
+interface RecapProps {
+  results: Result[]
+  onReplay: () => void
+  onChangeTheme: () => void
+}
+
+function Recap({ results, onReplay, onChangeTheme }: RecapProps) {
+  const ok = results.filter((r) => r.ok).length
+
+  return (
+    <Stack gap="lg" alignItems="stretch">
+      <Card variant="floating">
+        <Stack gap="xs" alignItems="center">
+          <Icon name="star" variant="solid" size="xl" color="warning" />
+          <Heading level={2} align="center" gutterBottom={false}>
+            Plus de vies !
+          </Heading>
+          <Text variant="metric" tone="primary">
+            {ok}
+          </Text>
+          <Text variant="body-sm" tone="muted" align="center">
+            bonnes réponses sur {results.length} questions tentées
+          </Text>
+        </Stack>
+      </Card>
+
+      <Card title="Récapitulatif">
+        <Stack gap="xs" role="list">
+          {results.map((r, i) => {
+            const d = byCode[r.code]
+            return (
+              <Stack
+                key={`${r.code}-${i}`}
+                direction="row"
+                gap="sm"
+                alignItems="center"
+                role="listitem"
+              >
+                <Icon
+                  name={r.ok ? 'check' : 'close'}
+                  variant="solid"
+                  size="sm"
+                  color={r.ok ? 'success' : 'error'}
+                  title={r.ok ? 'Bonne réponse' : 'Mauvaise réponse'}
+                />
+                <Text variant="body-sm">
+                  {d.code} — {d.nom}
+                </Text>
+              </Stack>
+            )
+          })}
+        </Stack>
+      </Card>
+
+      <Stack direction="row" gap="sm" justifyContent="center" wrap>
+        <Button onClick={onReplay}>Rejouer ce thème</Button>
+        <Button variant="ghost" onClick={onChangeTheme}>
+          Changer de thème
+        </Button>
+      </Stack>
+    </Stack>
+  )
+}
+
+interface PlayProps {
+  index: number
+  livesLeft: number
+  question: Question
+  picked: string | null
+  onChoose: (option: string) => void
+}
+
+function Play({ index, livesLeft, question, picked, onChoose }: PlayProps) {
+  const flash: CanopCardFlash | undefined = picked
+    ? picked === question.answer
+      ? 'success'
+      : 'error'
+    : undefined
+
+  return (
+    <Stack gap="md" alignItems="stretch">
+      <Stack direction="row" gap="sm" alignItems="center" justifyContent="space-between">
+        <Text variant="label" tone="muted">
+          Question {index + 1}
+        </Text>
+        <Lives value={livesLeft} max={LIVES} ariaLabel={`${livesLeft} vies restantes`} />
+      </Stack>
+
+      <Card flash={flash}>
+        <Stack gap="md" alignItems="stretch">
+          <Heading level={3} size={4} align="center" gutterBottom={false}>
+            {question.prompt}
+          </Heading>
+          <Stack gap="sm" alignItems="stretch" role="group" ariaLabel="Réponses proposées">
+            {question.options.map((opt) => (
+              <Choice
+                key={opt}
+                state={choiceState(opt, question.answer, picked)}
+                disabled={picked !== null}
+                onClick={() => onChoose(opt)}
+              >
+                <Text variant="body-md" as="span">
+                  {opt}
+                </Text>
+              </Choice>
+            ))}
+          </Stack>
+        </Stack>
+      </Card>
+    </Stack>
+  )
+}
+
 export default function Entrainement() {
   const [theme, setTheme] = useState<ThemeId | null>(null)
   const [index, setIndex] = useState(0)
@@ -179,6 +359,7 @@ export default function Entrainement() {
   const livesLeft = Math.max(0, LIVES - lostLives)
 
   function start(id: ThemeId) {
+    play('start')
     setTheme(id)
     setIndex(0)
     setResults([])
@@ -195,7 +376,6 @@ export default function Entrainement() {
     setPicked(option)
     setResults((r) => [...r, { code: question.dept.code, ok }])
 
-    // Passe à la carte suivante automatiquement, comme les autres modes.
     const gameOver = lostLives + (ok ? 0 : 1) >= LIVES
     setTimeout(() => {
       if (gameOver) {
@@ -209,87 +389,30 @@ export default function Entrainement() {
     }, ok ? 600 : 1100)
   }
 
-  // --- Choix du thème ---
-  if (!theme) {
-    return (
-      <div className="entrainement setup">
-        <h2><Icon name="university" size="sm" /> Entraînement ciblé</h2>
-        <p>Choisis un thème et révise-le à fond. Tu as {LIVES} vies : enchaîne les questions tant qu'il t'en reste.</p>
-        <div className="theme-grid">
-          {THEMES.map((t) => (
-            <button key={t.id} className="theme-card" onClick={() => { play('start'); start(t.id) }}>
-              <span className="theme-icon"><Icon name={t.icon} size="lg" /></span>
-              <span className="theme-title">{t.title}</span>
-              <span className="theme-desc">{t.desc}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    )
-  }
+  if (!theme) return <ThemePicker onPick={start} />
 
-  // --- Récap ---
   if (finished) {
-    const ok = results.filter((r) => r.ok).length
     return (
-      <div className="entrainement done">
-        <h2>Plus de vies ! <Icon name="star" size="sm" /></h2>
-        <p className="final-score">{ok} bonnes réponses</p>
-        <p className="final-sub">{results.length} questions tentées</p>
-        <ul className="recap">
-          {results.map((r, i) => {
-            const d = byCode[r.code]
-            return (
-              <li key={`${r.code}-${i}`}>
-                {r.ok ? (
-                  <Icon name="check" size="sm" color="success" />
-                ) : (
-                  <Icon name="close" size="sm" color="error" />
-                )}{' '}
-                {d.code} — {d.nom}
-              </li>
-            )
-          })}
-        </ul>
-        <div className="setup-buttons">
-          <button className="btn-primary" onClick={() => { play('start'); start(theme) }}>Rejouer ce thème</button>
-          <button className="btn-back" onClick={() => { play('click'); setTheme(null) }}>Changer de thème</button>
-        </div>
-      </div>
+      <Recap
+        results={results}
+        onReplay={() => start(theme)}
+        onChangeTheme={() => {
+          play('click')
+          setTheme(null)
+        }}
+      />
     )
   }
 
-  // --- Jeu ---
   if (!question) return null
 
   return (
-    <div className="entrainement play">
-      <div className="play-status">
-        <span className="card-count">Question {index + 1}</span>
-        <Lives value={livesLeft} max={LIVES} ariaLabel={`${livesLeft} vies restantes`} />
-      </div>
-      <div className="question-card">
-        <p className="prompt">{question.prompt}</p>
-        <div className="choices">
-          {question.options.map((opt) => {
-            let cls = 'btn-choice'
-            if (picked) {
-              if (opt === question.answer) cls += ' choice-ok'
-              else if (opt === picked) cls += ' choice-ko'
-            }
-            return (
-              <button
-                key={opt}
-                className={cls}
-                disabled={!!picked}
-                onClick={() => choose(opt)}
-              >
-                {opt}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </div>
+    <Play
+      index={index}
+      livesLeft={livesLeft}
+      question={question}
+      picked={picked}
+      onChoose={choose}
+    />
   )
 }
