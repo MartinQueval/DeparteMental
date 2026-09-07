@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Icon, Lives, useCanopSound, type CanopIconName } from 'canopui'
 import {
   byCode,
   departements,
@@ -8,19 +9,6 @@ import {
   type Departement,
 } from '../lib/departements.ts'
 import { recordAnswer, weakWeight } from '../lib/storage.ts'
-import { sfx } from '../lib/sound.ts'
-import {
-  IconCheck,
-  IconGraduationCap,
-  IconLandmark,
-  IconMapPin,
-  IconSparkle,
-  IconType,
-  IconX,
-  IconZap,
-  IconHeart,
-  type IconComponent,
-} from '../components/icons.tsx'
 
 const LIVES = 10
 
@@ -28,7 +16,7 @@ type ThemeId = 'prefecture' | 'souspref' | 'code' | 'nom' | 'region'
 
 interface Theme {
   id: ThemeId
-  icon: IconComponent
+  icon: CanopIconName
   title: string
   desc: string
 }
@@ -36,31 +24,31 @@ interface Theme {
 const THEMES: Theme[] = [
   {
     id: 'prefecture',
-    icon: IconLandmark,
+    icon: 'bank',
     title: 'Préfectures',
     desc: 'Quelle ville est la préfecture du département ?',
   },
   {
     id: 'souspref',
-    icon: IconMapPin,
+    icon: 'location',
     title: 'Sous-préfectures',
     desc: 'Retrouve une sous-préfecture du département.',
   },
   {
     id: 'code',
-    icon: IconType,
+    icon: 'pencil',
     title: 'Codes',
     desc: 'Associe chaque département à son numéro.',
   },
   {
     id: 'nom',
-    icon: IconZap,
+    icon: 'lightning',
     title: 'Noms',
     desc: 'Quel département se cache derrière ce numéro ?',
   },
   {
     id: 'region',
-    icon: IconMapPin,
+    icon: 'location',
     title: 'Régions',
     desc: 'Dans quelle région se trouve le département ?',
   },
@@ -185,6 +173,7 @@ export default function Entrainement() {
   const [picked, setPicked] = useState<string | null>(null)
   const [results, setResults] = useState<Result[]>([])
   const [finished, setFinished] = useState(false)
+  const { play } = useCanopSound()
 
   const lostLives = results.filter((r) => !r.ok).length
   const livesLeft = Math.max(0, LIVES - lostLives)
@@ -202,8 +191,7 @@ export default function Entrainement() {
     if (!question || picked || !theme) return
     const ok = option === question.answer
     recordAnswer(question.dept.code, ok)
-    if (ok) sfx.correct()
-    else sfx.wrong()
+    play(ok ? 'correct' : 'wrong')
     setPicked(option)
     setResults((r) => [...r, { code: question.dept.code, ok }])
 
@@ -211,7 +199,7 @@ export default function Entrainement() {
     const gameOver = lostLives + (ok ? 0 : 1) >= LIVES
     setTimeout(() => {
       if (gameOver) {
-        sfx.finish()
+        play('finish')
         setFinished(true)
         return
       }
@@ -225,12 +213,12 @@ export default function Entrainement() {
   if (!theme) {
     return (
       <div className="entrainement setup">
-        <h2><IconGraduationCap /> Entraînement ciblé</h2>
+        <h2><Icon name="university" size="sm" /> Entraînement ciblé</h2>
         <p>Choisis un thème et révise-le à fond. Tu as {LIVES} vies : enchaîne les questions tant qu'il t'en reste.</p>
         <div className="theme-grid">
           {THEMES.map((t) => (
-            <button key={t.id} className="theme-card" onClick={() => { sfx.start(); start(t.id) }}>
-              <span className="theme-icon"><t.icon /></span>
+            <button key={t.id} className="theme-card" onClick={() => { play('start'); start(t.id) }}>
+              <span className="theme-icon"><Icon name={t.icon} size="lg" /></span>
               <span className="theme-title">{t.title}</span>
               <span className="theme-desc">{t.desc}</span>
             </button>
@@ -245,7 +233,7 @@ export default function Entrainement() {
     const ok = results.filter((r) => r.ok).length
     return (
       <div className="entrainement done">
-        <h2>Plus de vies ! <IconSparkle /></h2>
+        <h2>Plus de vies ! <Icon name="star" size="sm" /></h2>
         <p className="final-score">{ok} bonnes réponses</p>
         <p className="final-sub">{results.length} questions tentées</p>
         <ul className="recap">
@@ -253,14 +241,19 @@ export default function Entrainement() {
             const d = byCode[r.code]
             return (
               <li key={`${r.code}-${i}`}>
-                {r.ok ? <IconCheck className="icon-ok" /> : <IconX className="icon-ko" />} {d.code} — {d.nom}
+                {r.ok ? (
+                  <Icon name="check" size="sm" color="success" />
+                ) : (
+                  <Icon name="close" size="sm" color="error" />
+                )}{' '}
+                {d.code} — {d.nom}
               </li>
             )
           })}
         </ul>
         <div className="setup-buttons">
-          <button className="btn-primary" onClick={() => { sfx.start(); start(theme) }}>Rejouer ce thème</button>
-          <button className="btn-back" onClick={() => { sfx.click(); setTheme(null) }}>Changer de thème</button>
+          <button className="btn-primary" onClick={() => { play('start'); start(theme) }}>Rejouer ce thème</button>
+          <button className="btn-back" onClick={() => { play('click'); setTheme(null) }}>Changer de thème</button>
         </div>
       </div>
     )
@@ -273,11 +266,7 @@ export default function Entrainement() {
     <div className="entrainement play">
       <div className="play-status">
         <span className="card-count">Question {index + 1}</span>
-        <span className="lives" aria-label={`${livesLeft} vies restantes`}>
-          {Array.from({ length: LIVES }, (_, i) => (
-            <IconHeart key={i} className={i < livesLeft ? 'life' : 'life lost'} />
-          ))}
-        </span>
+        <Lives value={livesLeft} max={LIVES} ariaLabel={`${livesLeft} vies restantes`} />
       </div>
       <div className="question-card">
         <p className="prompt">{question.prompt}</p>

@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import franceMap from '@svg-maps/france.departments'
+import { Icon, Legend, useCanopSound } from 'canopui'
 import { byCode, shuffle } from '../lib/departements.ts'
 import { recordAnswer, load, type DeptStats } from '../lib/storage.ts'
-import { sfx } from '../lib/sound.ts'
-import { IconCheck, IconDot, IconMap, IconTarget } from '../components/icons.tsx'
 
 const ROUNDS = 10
 const mapCodes = franceMap.locations.map((l) => l.id)
@@ -47,6 +46,7 @@ export default function Carte() {
   const [locked, setLocked] = useState(false)
   const [vb, setVb] = useState<VB>(BASE)
   const stats = load().stats
+  const { play } = useCanopSound()
 
   const svgRef = useRef<SVGSVGElement>(null)
   const pathRefs = useRef<Record<string, SVGPathElement | null>>({})
@@ -56,7 +56,7 @@ export default function Carte() {
   const movedRef = useRef(false)
 
   function start() {
-    sfx.start()
+    play('start')
     setQueue(shuffle(mapCodes).slice(0, ROUNDS))
     setRound(0)
     setScore(0)
@@ -76,15 +76,15 @@ export default function Carte() {
     const last = round + 1 >= ROUNDS
     recordAnswer(targetCode, ok)
     if (ok) {
-      sfx.correct()
+      play('correct')
       setScore((s) => s + 1)
       setResult((r) => ({ ...r, [id]: 'ok' }))
       setTimeout(() => {
         setRound((r) => r + 1)
-        if (last) sfx.finish()
+        if (last) play('finish')
       }, 400)
     } else {
-      sfx.wrong()
+      play('wrong')
       setLocked(true)
       setResult((r) => ({ ...r, [id]: 'ko', [targetCode]: 'target' }))
       setTimeout(() => {
@@ -96,7 +96,7 @@ export default function Carte() {
         })
         setLocked(false)
         setRound((r) => r + 1)
-        if (last) sfx.finish()
+        if (last) play('finish')
       }, 1400)
     }
   }
@@ -253,12 +253,12 @@ export default function Carte() {
   if (!mode) {
     return (
       <div className="carte setup">
-        <h2><IconMap /> Carte de France</h2>
+        <h2><Icon name="mapLocation" size="sm" /> Carte de France</h2>
         <div className="setup-buttons">
           <button className="btn-primary" onClick={start}>
             Jouer ({ROUNDS} départements à localiser)
           </button>
-          <button className="btn-primary" onClick={() => { sfx.click(); setMode('heatmap') }}>
+          <button className="btn-primary" onClick={() => { play('click'); setMode('heatmap') }}>
             Ma heatmap de progression
           </button>
         </div>
@@ -273,24 +273,30 @@ export default function Carte() {
     <div className="carte">
       {mode === 'jeu' && !finished && target && (
         <div className="hud">
-          <span><IconTarget /> {round + 1}/{ROUNDS}</span>
+          <span><Icon name="locationCheck" size="sm" /> {round + 1}/{ROUNDS}</span>
           <span className="carte-target">
             Clique sur : <strong>{target.nom} ({target.code})</strong>
           </span>
-          <span className="score">{score} <IconCheck className="icon-ok" /></span>
+          <span className="score">{score} <Icon name="check" size="sm" color="success" /></span>
         </div>
       )}
       {finished && (
         <div className="carte-done">
-          <p className="final-score">{score} / {ROUNDS} <IconTarget className="accent" /></p>
+          <p className="final-score">
+            {score} / {ROUNDS} <Icon name="locationCheck" size="sm" color="accent" />
+          </p>
           <button className="btn-primary" onClick={start}>Rejouer</button>
         </div>
       )}
       {mode === 'heatmap' && (
-        <p className="hint">
-          <IconDot color="#22c55e" /> maîtrisé · <IconDot color="#eab308" /> moyen ·{' '}
-          <IconDot color="#ef4444" /> à bosser · <IconDot color="#ffffff" /> jamais croisé
-        </p>
+        <Legend
+          items={[
+            { tone: 'success', label: 'maîtrisé' },
+            { tone: 'warning', label: 'moyen' },
+            { tone: 'error', label: 'à bosser' },
+            { tone: 'neutral', label: 'jamais croisé' },
+          ]}
+        />
       )}
 
       <div className="map-wrap">

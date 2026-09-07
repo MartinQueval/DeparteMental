@@ -1,28 +1,30 @@
 import { useState } from 'react'
+import {
+  CardGrid,
+  Heading,
+  Icon,
+  PageContent,
+  Pressable,
+  ProgressBar,
+  SoundToggle,
+  Stack,
+  Text,
+  useCanopSound,
+  type CanopIconName,
+} from 'canopui'
 import Quiz from './modes/Quiz.tsx'
 import Entrainement from './modes/Entrainement.tsx'
 import Daily from './modes/Daily.tsx'
 import Carte from './modes/Carte.tsx'
-import {
-  IconZap,
-  IconGraduationCap,
-  IconCalendar,
-  IconMap,
-  IconFlag,
-  IconVolume,
-  IconVolumeOff,
-  type IconComponent,
-} from './components/icons.tsx'
 import { departements } from './lib/departements.ts'
 import { load } from './lib/storage.ts'
-import { isMuted, sfx, toggleMuted } from './lib/sound.ts'
 
 type ModeId = 'quiz' | 'entrainement' | 'daily' | 'carte'
 type View = 'home' | ModeId
 
 interface ModeDef {
   id: ModeId
-  icon: IconComponent
+  icon: CanopIconName
   title: string
   desc: string
 }
@@ -30,25 +32,25 @@ interface ModeDef {
 const MODES: ModeDef[] = [
   {
     id: 'quiz',
-    icon: IconZap,
+    icon: 'lightning',
     title: 'Quiz éclair',
     desc: '60 secondes, un max de bonnes réponses. Enchaîne pour le multiplicateur !',
   },
   {
     id: 'entrainement',
-    icon: IconGraduationCap,
+    icon: 'book',
     title: 'Entraînement',
     desc: 'Choisis ton thème et révise-le à fond.',
   },
   {
     id: 'daily',
-    icon: IconCalendar,
+    icon: 'calendar',
     title: 'Défi du jour',
     desc: 'Un département mystère par jour, des indices à chaque essai.',
   },
   {
     id: 'carte',
-    icon: IconMap,
+    icon: 'mapLocation',
     title: 'Carte',
     desc: 'Clique le bon département sur la carte de France.',
   },
@@ -61,76 +63,104 @@ const MODE_COMPONENTS: Record<ModeId, () => React.JSX.Element | null> = {
   carte: Carte,
 }
 
-function Progress() {
+const TOTAL = departements.length
+
+function maitrises(): number {
   const { stats } = load()
-  const mastered = departements.filter((d) => {
+  return departements.filter((d) => {
     const s = stats[d.code]
     return s && s.seen >= 3 && s.ok / s.seen >= 0.8
   }).length
-  return (
-    <div className="progress">
-      <div className="progress-bar">
-        <div className="progress-fill" style={{ width: `${(mastered / 101) * 100}%` }} />
-      </div>
-      <span className="progress-label">{mastered} / 101 départements maîtrisés</span>
-    </div>
-  )
 }
 
-function SoundToggle() {
-  const [muted, setMuted] = useState(isMuted())
+function Progression() {
+  const acquis = maitrises()
+
   return (
-    <button
-      className="sound-toggle"
-      aria-label={muted ? 'Activer le son' : 'Couper le son'}
-      onClick={() => setMuted(toggleMuted())}
-    >
-      {muted ? <IconVolumeOff /> : <IconVolume />}
-    </button>
+    <ProgressBar
+      value={acquis}
+      max={TOTAL}
+      label={`${acquis} / ${TOTAL} départements maîtrisés`}
+    />
   )
 }
 
 export default function App() {
   const [view, setView] = useState<View>('home')
+  const { play } = useCanopSound()
 
   if (view !== 'home') {
     const Mode = MODE_COMPONENTS[view]
     return (
-      <div className="app">
-        <SoundToggle />
-        <div className="view" key={view}>
-          <header className="mode-header">
-            <button className="btn-back" onClick={() => { sfx.click(); setView('home') }}>← Menu</button>
-          </header>
-          <Mode />
-        </div>
-      </div>
+      <PageContent>
+        <Stack gap="md" alignItems="stretch">
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Pressable
+              onClick={() => {
+                play('click')
+                setView('home')
+              }}
+              padding="sm"
+              ariaLabel="Revenir au menu"
+            >
+              <Stack direction="row" gap="xs" alignItems="center">
+                <Icon name="arrowLeft" size="sm" />
+                <Text variant="label">Menu</Text>
+              </Stack>
+            </Pressable>
+            <SoundToggle />
+          </Stack>
+          <div key={view}>
+            <Mode />
+          </div>
+        </Stack>
+      </PageContent>
     )
   }
 
   return (
-    <div className="app">
-      <SoundToggle />
-      <div className="view home" key="home">
-        <header className="home-header">
-          <h1>
-            Départe<span className="accent">Mental</span>
-          </h1>
-          <p className="tagline">
-            Le jeu pour enfin retenir les 101 départements <IconFlag className="accent" />
-          </p>
-        </header>
-        <Progress />
-        <main className="mode-grid">
+    <PageContent>
+      <Stack gap="lg" alignItems="stretch">
+        <Stack direction="row" justifyContent="end">
+          <SoundToggle />
+        </Stack>
+
+        <Stack gap="xs" alignItems="center">
+          <Heading level={1} align="center">
+            Départe<Text as="span" tone="primary" weight="extrabold">Mental</Text>
+          </Heading>
+          <Text variant="lead" tone="muted" align="center">
+            Le jeu pour enfin retenir les {TOTAL} départements
+          </Text>
+        </Stack>
+
+        <Progression />
+
+        <CardGrid minItemWidth="15rem" gap="md">
           {MODES.map((m) => (
-            <button key={m.id} className="mode-card" onClick={() => { sfx.start(); setView(m.id) }}>
-              <span className="mode-icon"><m.icon /></span>
-              <span className="mode-title">{m.title}</span>
-              <span className="mode-desc">{m.desc}</span>
-            </button>
+            <Pressable
+              key={m.id}
+              onClick={() => {
+                play('start')
+                setView(m.id)
+              }}
+              padding="lg"
+              fullWidth
+              ariaLabel={m.title}
+            >
+              <Stack gap="sm" alignItems="start">
+                <Icon name={m.icon} size="lg" color="primary" variant="solid" />
+                <Heading level={3} size={4}>
+                  {m.title}
+                </Heading>
+                <Text variant="body-sm" tone="muted">
+                  {m.desc}
+                </Text>
+              </Stack>
+            </Pressable>
           ))}
-        </main>
-      </div>
-    </div>
+        </CardGrid>
+      </Stack>
+    </PageContent>
   )
 }

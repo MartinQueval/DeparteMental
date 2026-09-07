@@ -12,7 +12,11 @@ export default defineConfig([
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
+      // `configs.flat` n'existe qu'a partir de la version 7 du greffon. Alignes
+      // sur CanopUI, nous sommes en 5.2 -- ou la meme config plate se nomme
+      // `recommended-latest`. La version 7 exige ESLint 10, que la librairie ne
+      // prend pas.
+      reactHooks.configs['recommended-latest'],
       reactRefresh.configs.vite,
     ],
     languageOptions: {

@@ -7,6 +7,15 @@
     "skipLibCheck": true,
 
     "moduleResolution": "bundler",
+    // `canopui` est montée en lien symbolique (dépendance `file:`) : TypeScript
+    // résout au realpath, si bien que `canopui/vite` trouve le `vite` dépendance
+    // de développement de la librairie et non le nôtre — deux copies, deux
+    // classes `Plugin`, TS2769. La librairie déclare bien `vite` en dépendance
+    // pair, ce qui couvre le cas d'une installation depuis le registre ; ce
+    // `paths` ne traite que le lien symbolique, propre à notre poste.
+    "paths": {
+      "vite": ["./node_modules/vite"]
+    },
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,

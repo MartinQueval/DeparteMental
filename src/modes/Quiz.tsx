@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Icon, useCanopSound } from 'canopui'
 import {
   departements,
   distractors,
@@ -8,16 +9,6 @@ import {
   type Departement,
 } from '../lib/departements.ts'
 import { recordAnswer, getBest, setBest, weakWeight } from '../lib/storage.ts'
-import { sfx } from '../lib/sound.ts'
-import {
-  IconCheck,
-  IconFlame,
-  IconKeyboard,
-  IconTimer,
-  IconTrophy,
-  IconX,
-  IconZap,
-} from '../components/icons.tsx'
 
 const DURATION = 60
 
@@ -107,6 +98,7 @@ export default function Quiz() {
   const [input, setInput] = useState('')
   const [newRecord, setNewRecord] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { play } = useCanopSound()
 
   const multiplier = 1 + Math.floor(streak / 3)
 
@@ -116,17 +108,17 @@ export default function Quiz() {
       if (timeLeft <= 1) {
         setTimeLeft(0)
         setNewRecord(setBest('quiz', score))
-        sfx.finish()
+        play('finish')
         setPhase('done')
       } else {
         setTimeLeft((s) => s - 1)
       }
     }, 1000)
     return () => clearTimeout(t)
-  }, [phase, timeLeft, score])
+  }, [phase, timeLeft, score, play])
 
   function start(mode: AnswerMode) {
-    sfx.start()
+    play('start')
     setAnswerMode(mode)
     setScore(0)
     setStreak(0)
@@ -141,8 +133,7 @@ export default function Quiz() {
   function answer(ok: boolean) {
     if (!question) return
     recordAnswer(question.dept.code, ok)
-    if (ok) sfx.correct()
-    else sfx.wrong()
+    play(ok ? 'correct' : 'wrong')
     setFeedback({ ok, answer: question.answer })
     if (ok) {
       setScore((s) => s + 10 * multiplier)
@@ -163,13 +154,13 @@ export default function Quiz() {
   if (phase === 'setup') {
     return (
       <div className="quiz setup">
-        <h2><IconZap /> Quiz éclair</h2>
+        <h2><Icon name="lightning" size="sm" /> Quiz éclair</h2>
         <p>{DURATION} secondes. Bonne réponse : +10 pts. Série de 3 : multiplicateur !</p>
         <p className="best">Record : {getBest('quiz')} pts</p>
         <div className="setup-buttons">
           <button className="btn-primary" onClick={() => start('qcm')}>QCM (4 choix)</button>
           <button className="btn-primary" onClick={() => start('saisie')}>
-            <IconKeyboard /> Saisie clavier
+            Saisie clavier
           </button>
         </div>
       </div>
@@ -179,10 +170,17 @@ export default function Quiz() {
   if (phase === 'done') {
     return (
       <div className="quiz done">
-        <h2>{newRecord ? <><IconTrophy /> Nouveau record !</> : <><IconTimer /> Terminé !</>}</h2>
+        <h2>
+          {newRecord ? (
+            <><Icon name="award" size="sm" /> Nouveau record !</>
+          ) : (
+            <><Icon name="timer" size="sm" /> Terminé !</>
+          )}
+        </h2>
         <p className="final-score">{score} pts</p>
         <p>
-          <IconCheck className="icon-ok" /> {count.ok} bonnes · <IconX className="icon-ko" /> {count.ko} ratées
+          <Icon name="check" size="sm" color="success" /> {count.ok} bonnes ·{' '}
+          <Icon name="close" size="sm" color="error" /> {count.ko} ratées
         </p>
         <p className="best">Record : {getBest('quiz')} pts</p>
         <button className="btn-primary" onClick={() => setPhase('setup')}>Rejouer</button>
@@ -195,10 +193,12 @@ export default function Quiz() {
   return (
     <div className="quiz play">
       <div className="hud">
-        <span className={`timer ${timeLeft <= 10 ? 'urgent' : ''}`}><IconTimer /> {timeLeft}s</span>
+        <span className={`timer ${timeLeft <= 10 ? 'urgent' : ''}`}>
+          <Icon name="timer" size="sm" /> {timeLeft}s
+        </span>
         <span className="score">{score} pts</span>
         <span className={`streak ${multiplier > 1 ? 'hot' : ''}`}>
-          <IconFlame /> {streak} {multiplier > 1 && `(×${multiplier})`}
+          <Icon name="fire" size="sm" /> {streak} {multiplier > 1 && `(×${multiplier})`}
         </span>
       </div>
 

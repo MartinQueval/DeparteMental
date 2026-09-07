@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Icon, useCanopSound, type CanopIconName } from 'canopui'
 import {
   byCode,
   codeValue,
@@ -7,21 +8,6 @@ import {
   type Departement,
 } from '../lib/departements.ts'
 import { getDaily, setDaily, recordAnswer, type DailyState } from '../lib/storage.ts'
-import { sfx } from '../lib/sound.ts'
-import {
-  IconArrowDown,
-  IconArrowUp,
-  IconCalendar,
-  IconCheck,
-  IconClipboard,
-  IconLandmark,
-  IconMapPin,
-  IconRuler,
-  IconSparkle,
-  IconTarget,
-  IconType,
-  IconX,
-} from '../components/icons.tsx'
 
 const MAX_GUESSES = 6
 
@@ -39,13 +25,18 @@ function dailyDept(dateKey: string): Departement {
   return departements[Math.abs(h) % departements.length]
 }
 
-function hints(target: Departement, wrongCount: number) {
-  const all = [
-    { Icon: IconMapPin, text: `Région : ${target.region}` },
-    { Icon: IconType, text: `Le nom commence par « ${target.nom[0]} »` },
-    { Icon: IconRuler, text: `Le nom fait ${target.nom.length} caractères` },
-    { Icon: IconLandmark, text: `La préfecture commence par « ${target.prefecture[0]} »` },
-    { Icon: IconLandmark, text: `Préfecture : ${target.prefecture}` },
+interface Hint {
+  icon: CanopIconName | null
+  text: string
+}
+
+function hints(target: Departement, wrongCount: number): Hint[] {
+  const all: Hint[] = [
+    { icon: 'location', text: `Région : ${target.region}` },
+    { icon: 'pencil', text: `Le nom commence par « ${target.nom[0]} »` },
+    { icon: null, text: `Le nom fait ${target.nom.length} caractères` },
+    { icon: 'bank', text: `La préfecture commence par « ${target.prefecture[0]} »` },
+    { icon: 'bank', text: `Préfecture : ${target.prefecture}` },
   ]
   return all.slice(0, wrongCount)
 }
@@ -58,18 +49,18 @@ function GuessRow({ guess, target }: { guess: string; target: Departement }) {
       <span className="guess-nom">{d.nom}</span>
       <span className="guess-cell">
         {d.code === target.code ? (
-          <IconTarget className="icon-ok" />
+          <Icon name="locationCheck" size="sm" color="success" />
         ) : codeDiff > 0 ? (
-          <><IconArrowUp /> n° plus grand</>
+          <><Icon name="arrowUp" size="sm" /> n° plus grand</>
         ) : (
-          <><IconArrowDown /> n° plus petit</>
+          <><Icon name="arrowDown" size="sm" /> n° plus petit</>
         )}
       </span>
       <span className="guess-cell">
         {d.region === target.region ? (
-          <><IconCheck className="icon-ok" /> région</>
+          <><Icon name="check" size="sm" color="success" /> région</>
         ) : (
-          <><IconX className="icon-ko" /> région</>
+          <><Icon name="close" size="sm" color="error" /> région</>
         )}
       </span>
     </div>
@@ -85,6 +76,7 @@ export default function Daily() {
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const { play } = useCanopSound()
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -103,9 +95,7 @@ export default function Daily() {
     const won = found.code === target.code
     const done = won || guesses.length >= MAX_GUESSES
     if (done) recordAnswer(target.code, won)
-    if (won) sfx.finish()
-    else if (done) sfx.wrong()
-    else sfx.click()
+    play(won ? 'finish' : done ? 'wrong' : 'click')
     const next: DailyState = { guesses, done, won }
     setState(next)
     setDaily(dateKey, next)
@@ -130,11 +120,13 @@ export default function Daily() {
 
   return (
     <div className="daily">
-      <h2><IconCalendar /> Défi du jour</h2>
+      <h2><Icon name="calendar" size="sm" /> Défi du jour</h2>
       <p>Devine le département mystère en {MAX_GUESSES} essais max.</p>
 
-      {hints(target, Math.min(wrongCount, 5)).map(({ Icon, text }) => (
-        <p key={text} className="hint"><Icon /> {text}</p>
+      {hints(target, Math.min(wrongCount, 5)).map(({ icon, text }) => (
+        <p key={text} className="hint">
+          {icon && <Icon name={icon} size="sm" />} {text}
+        </p>
       ))}
 
       <div className="guesses">
@@ -164,7 +156,8 @@ export default function Daily() {
         <div className="daily-result">
           {state.won ? (
             <p className="final-score">
-              Bravo ! <IconSparkle className="accent" /> {state.guesses.length}/{MAX_GUESSES}
+              Bravo ! <Icon name="star" size="sm" color="accent" /> {state.guesses.length}/
+              {MAX_GUESSES}
             </p>
           ) : (
             <p className="final-score">
@@ -172,12 +165,16 @@ export default function Daily() {
             </p>
           )}
           <p>
-            <IconLandmark /> Préfecture : {target.prefecture}
+            <Icon name="bank" size="sm" /> Préfecture : {target.prefecture}
             {target.sousPrefectures.length > 0 &&
               ` · Sous-préf. : ${target.sousPrefectures.join(', ')}`}
           </p>
           <button className="btn-primary" onClick={share}>
-            {copied ? <><IconCheck /> Copié !</> : <><IconClipboard /> Partager le résultat</>}
+            {copied ? (
+              <><Icon name="check" size="sm" /> Copié !</>
+            ) : (
+              <><Icon name="clipboard" size="sm" /> Partager le résultat</>
+            )}
           </button>
           <p className="hint">Reviens demain pour un nouveau département !</p>
         </div>
