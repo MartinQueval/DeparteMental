@@ -14,8 +14,19 @@ export default defineConfig({
     // symbolique : ce qu'elle importe se résout depuis son propre dossier, où
     // vivent ses dépendances de développement. Sans ce dédoublonnage, la page
     // charge deux React — et deux React donnent « Invalid hook call » — ainsi
-    // que deux Emotion, ce qui casserait le thème sans rien dire.
-    dedupe: ['react', 'react-dom', '@emotion/react', '@emotion/styled', '@mui/material'],
+    // que deux Emotion, ce qui casserait le thème sans rien dire. `framer-motion`
+    // est logé à la même enseigne depuis qu'il est passé en dépendance de pair :
+    // le jeu et la librairie en ont chacun une copie, et deux moteurs
+    // d'animation, ce sont deux contextes React — les hooks `useStagger` et
+    // `useEnterAnimation` de la librairie ne verraient pas les `motion` du jeu.
+    dedupe: [
+      'react',
+      'react-dom',
+      '@emotion/react',
+      '@emotion/styled',
+      '@mui/material',
+      'framer-motion',
+    ],
   },
   optimizeDeps: {
     // Le paquet est monté en lien symbolique : l'optimiseur essayait de le
