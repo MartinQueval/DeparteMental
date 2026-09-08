@@ -233,7 +233,7 @@ function DailyResult({ state, target, dateKey }: DailyResultProps) {
 
       <ShareResult rows={rows} text={shareText(rows, state, dateKey)} />
 
-      <Text variant="body-sm" tone="muted">
+      <Text variant="body-sm" align="center">
         Reviens demain pour un nouveau département !
       </Text>
     </Stack>
@@ -295,15 +295,17 @@ export default function Daily() {
   return (
     <ViewIn>
       <Stack gap="lg">
-        <Stack gap="xs">
-          <Stack direction="row" gap="xs" alignItems="center">
-            <Icon name="calendar" size="md" color="primary" />
-            <Heading level={2} gutterBottom={false}>
-              Défi du jour
-            </Heading>
+        <Card>
+          <Stack gap="xs">
+            <Stack direction="row" gap="xs" alignItems="center">
+              <Icon name="calendar" size="md" color="primary" />
+              <Heading level={2} gutterBottom={false}>
+                Défi du jour
+              </Heading>
+            </Stack>
+            <Text tone="muted">Devine le département mystère en {MAX_GUESSES} essais max.</Text>
           </Stack>
-          <Text tone="muted">Devine le département mystère en {MAX_GUESSES} essais max.</Text>
-        </Stack>
+        </Card>
 
         {wrongCount > 0 && (
           <Card title="Indices" density="dense">

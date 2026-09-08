@@ -27,7 +27,7 @@ import {
   type Departement,
 } from '../lib/departements.ts'
 import { Cascade, CascadeItem, ViewIn } from '../lib/motion.tsx'
-import { recordAnswer, getBest, setBest, weakWeight } from '../lib/storage.ts'
+import { recordAnswer, getBest, pickWeighted, setBest } from '../lib/storage.ts'
 
 const DURATION = 60
 const DURATION_MS = DURATION * 1000
@@ -66,18 +66,8 @@ const ANSWER_MODES: CanopSegmentedControlOption<AnswerMode>[] = [
   { value: 'saisie', label: 'Saisie clavier' },
 ]
 
-function pickWeighted(): Departement {
-  const weights = departements.map((d) => weakWeight(d.code))
-  let r = Math.random() * weights.reduce((a, b) => a + b, 0)
-  for (let i = 0; i < departements.length; i++) {
-    r -= weights[i]
-    if (r <= 0) return departements[i]
-  }
-  return departements[departements.length - 1]
-}
-
 function makeQuestion(answerMode: AnswerMode): Question {
-  const dept = pickWeighted()
+  const dept = pickWeighted(departements)
   const kind = Math.floor(Math.random() * 3)
   let q: Question
 
@@ -158,18 +148,18 @@ interface SetupProps {
 
 function Setup({ answerMode, onAnswerModeChange, onStart }: SetupProps) {
   return (
-    <Stack gap="lg">
-      <Stack gap="xs" alignItems="center">
-        <Icon name="lightning" size="xl" color="primary" variant="solid" />
-        <Heading level={2} align="center" gutterBottom={false}>
-          Quiz éclair
-        </Heading>
-        <Text variant="lead" tone="muted" align="center">
-          {DURATION} secondes. Bonne réponse : +10 pts. Série de 3 : multiplicateur !
-        </Text>
-      </Stack>
+    <Card radius="xl">
+      <Stack gap="lg" alignItems="stretch">
+        <Stack gap="xs" alignItems="center">
+          <Icon name="lightning" size="xl" color="primary" variant="solid" />
+          <Heading level={2} align="center" gutterBottom={false}>
+            Quiz éclair
+          </Heading>
+          <Text variant="lead" tone="muted" align="center">
+            {DURATION} secondes. Bonne réponse : +10 pts. Série de 3 : multiplicateur !
+          </Text>
+        </Stack>
 
-      <Card radius="xl">
         <Stack gap="md" alignItems="center">
           <Text variant="label" tone="muted" as="span">
             Comment veux-tu répondre ?
@@ -190,10 +180,10 @@ function Setup({ answerMode, onAnswerModeChange, onStart }: SetupProps) {
             Commencer
           </Button>
         </Stack>
-      </Card>
 
-      <BestLine best={getBest('quiz')} />
-    </Stack>
+        <BestLine best={getBest('quiz')} />
+      </Stack>
+    </Card>
   )
 }
 
@@ -372,6 +362,7 @@ export default function Quiz() {
   const multiplier = 1 + Math.floor(streak / 3)
 
   useEffect(() => {
+    if (phase !== 'play') return
     if (!verdict) return
     const id = window.setTimeout(
       () => {
@@ -383,7 +374,7 @@ export default function Quiz() {
       verdict.ok ? HOLD_OK : HOLD_KO,
     )
     return () => window.clearTimeout(id)
-  }, [verdict, answerMode])
+  }, [phase, verdict, answerMode])
 
   function start() {
     play('start')

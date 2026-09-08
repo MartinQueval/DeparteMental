@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import franceMap from '@svg-maps/france.departments'
 import {
   Button,
@@ -11,11 +11,14 @@ import {
   Text,
   useCanopSound,
   useSvgMapViewport,
+  useTransientState,
+  type CanopCardFlash,
   type CanopSvgMapRegion,
   type UseSvgMapViewportResult,
 } from 'canopui'
 import { byCode, shuffle, type Departement } from '../lib/departements.ts'
 import { ViewIn } from '../lib/motion.tsx'
+import { useDelayedStep } from '../lib/useDelayedStep.ts'
 import { load, recordAnswer, type DeptStats } from '../lib/storage.ts'
 
 const ROUNDS = 10
@@ -58,22 +61,6 @@ function heatFill(code: string, stats: Record<string, DeptStats>): string {
   return WEAK
 }
 
-function useDelayedStep() {
-  const timer = useRef<number | null>(null)
-
-  useEffect(
-    () => () => {
-      if (timer.current !== null) window.clearTimeout(timer.current)
-    },
-    []
-  )
-
-  return useCallback((step: () => void, delay: number) => {
-    if (timer.current !== null) window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(step, delay)
-  }, [])
-}
-
 interface CarteMapProps {
   viewport: UseSvgMapViewportResult
   regions: readonly CanopSvgMapRegion[]
@@ -104,7 +91,7 @@ function CarteMap({ viewport, regions, fill, selectable = false, onSelect }: Car
 
 function CarteAide() {
   return (
-    <Text variant="caption" tone="muted" align="center">
+    <Text variant="caption" align="center">
       Pince pour zoomer · glisse pour te déplacer · « IDF » pour la région parisienne
     </Text>
   )
@@ -156,11 +143,12 @@ interface CarteConsigneProps {
   round: number
   score: number
   target: Departement
+  flash?: CanopCardFlash
 }
 
-function CarteConsigne({ round, score, target }: CarteConsigneProps) {
+function CarteConsigne({ round, score, target, flash }: CarteConsigneProps) {
   return (
-    <Card density="dense">
+    <Card density="dense" flash={flash}>
       <Stack gap="sm" alignItems="stretch">
         <Stack direction="row" gap="md" justifyContent="space-between" alignItems="center">
           <Stack direction="row" gap="xs" alignItems="center">
@@ -218,6 +206,7 @@ interface UseCarteJeuResult {
   finished: boolean
   target: Departement | null
   fill: (id: string) => string
+  flash: CanopCardFlash | undefined
   answer: (id: string) => void
   restart: () => void
 }
@@ -225,6 +214,11 @@ interface UseCarteJeuResult {
 function useCarteJeu(): UseCarteJeuResult {
   const { play } = useCanopSound()
   const viewport = useSvgMapViewport({ viewBox: franceMap.viewBox })
+  const {
+    value: flash,
+    show: showFlash,
+    clear: clearFlash,
+  } = useTransientState<CanopCardFlash | undefined>(undefined)
   const [queue, setQueue] = useState(() => shuffle(MAP_CODES).slice(0, ROUNDS))
   const [round, setRound] = useState(0)
   const [score, setScore] = useState(0)
@@ -243,6 +237,7 @@ function useCarteJeu(): UseCarteJeuResult {
 
       if (correct) {
         play('correct')
+        showFlash('success', CORRECT_DELAY)
         setScore((current) => current + 1)
         setResult((current) => ({ ...current, [id]: 'ok' }))
         later(() => {
@@ -253,6 +248,7 @@ function useCarteJeu(): UseCarteJeuResult {
       }
 
       play('wrong')
+      showFlash('error', WRONG_DELAY)
       setLocked(true)
       setResult((current) => ({ ...current, [id]: 'ko', [targetCode]: 'target' }))
       later(() => {
@@ -267,7 +263,7 @@ function useCarteJeu(): UseCarteJeuResult {
         if (last) play('finish')
       }, WRONG_DELAY)
     },
-    [later, locked, play, round, targetCode]
+    [later, locked, play, round, showFlash, targetCode]
   )
 
   const fill = useCallback(
@@ -280,13 +276,14 @@ function useCarteJeu(): UseCarteJeuResult {
 
   const restart = useCallback(() => {
     play('start')
+    clearFlash()
     viewport.reset()
     setQueue(shuffle(MAP_CODES).slice(0, ROUNDS))
     setRound(0)
     setScore(0)
     setResult({})
     setLocked(false)
-  }, [play, viewport])
+  }, [clearFlash, play, viewport])
 
   return {
     viewport,
@@ -295,18 +292,21 @@ function useCarteJeu(): UseCarteJeuResult {
     finished: round >= ROUNDS,
     target: targetCode ? byCode[targetCode] : null,
     fill,
+    flash,
     answer,
     restart,
   }
 }
 
 function CarteJeu() {
-  const { viewport, round, score, finished, target, fill, answer, restart } = useCarteJeu()
+  const { viewport, round, score, finished, target, fill, flash, answer, restart } = useCarteJeu()
 
   return (
     <Stack gap="md" alignItems="stretch">
       {finished && <CarteResultat score={score} onRestart={restart} />}
-      {!finished && target && <CarteConsigne round={round} score={score} target={target} />}
+      {!finished && target && (
+        <CarteConsigne round={round} score={score} target={target} flash={flash} />
+      )}
       <CarteMap
         viewport={viewport}
         regions={PLAIN_REGIONS}
@@ -327,14 +327,18 @@ function CarteHeatmap() {
   return (
     <Stack gap="md" alignItems="stretch">
       <Card density="dense">
-        <Legend
-          items={[
-            { tone: 'success', label: 'maîtrisé' },
-            { tone: 'warning', label: 'moyen' },
-            { tone: 'error', label: 'à bosser' },
-            { tone: 'neutral', label: 'jamais croisé' },
-          ]}
-        />
+        <Stack gap="xs" alignItems="stretch">
+          <Legend
+            items={[
+              { tone: 'success', label: 'maîtrisé' },
+              { tone: 'warning', label: 'moyen' },
+              { tone: 'error', label: 'à bosser' },
+            ]}
+          />
+          <Text variant="caption" tone="muted">
+            Les départements restés sans couleur n'ont jamais été croisés.
+          </Text>
+        </Stack>
       </Card>
       <CarteMap viewport={viewport} regions={NAMED_REGIONS} fill={fill} />
       <CarteAide />

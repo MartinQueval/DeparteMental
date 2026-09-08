@@ -1,4 +1,5 @@
 import { createLocalStore } from 'canopui'
+import type { Departement } from './departements.ts'
 
 export interface DeptStats {
   seen: number
@@ -28,7 +29,7 @@ const INITIAL: SaveState = { stats: {}, srs: {}, daily: {}, best: {} }
 
 const INTERVALS = [0, 1, 3, 7, 30]
 const DAY_MS = 86_400_000
-export const MAX_BOX = INTERVALS.length - 1
+const MAX_BOX = INTERVALS.length - 1
 
 function isPartialSave(value: unknown): value is Partial<SaveState> {
   return typeof value === 'object' && value !== null
@@ -69,20 +70,21 @@ export function recordAnswer(code: string, correct: boolean): SaveState {
   })
 }
 
-export function dueCards(allCodes: string[], limit = 10): string[] {
-  const { srs } = store.get()
-  const now = Date.now()
-  const due = allCodes
-    .filter((c) => srs[c] && srs[c].due <= now)
-    .sort((a, b) => srs[a].due - srs[b].due)
-  const fresh = allCodes.filter((c) => !srs[c])
-  return [...due, ...fresh].slice(0, limit)
-}
-
-export function weakWeight(code: string): number {
+function weakWeight(code: string): number {
   const s = store.get().stats[code]
   if (!s) return 3
   return 1 + (s.ko * 4) / s.seen
+}
+
+/** Pondère le tirage vers les départements les moins maîtrisés. */
+export function pickWeighted(pool: Departement[]): Departement {
+  const weights = pool.map((d) => weakWeight(d.code))
+  let r = Math.random() * weights.reduce((a, b) => a + b, 0)
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i]
+    if (r <= 0) return pool[i]
+  }
+  return pool[pool.length - 1]
 }
 
 export function getDaily(dateKey: string): DailyState | null {

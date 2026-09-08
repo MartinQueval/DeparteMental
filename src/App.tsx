@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  Card,
   CardGrid,
   Heading,
   Icon,
@@ -18,6 +19,7 @@ import Daily from './modes/Daily.tsx'
 import Carte from './modes/Carte.tsx'
 import { departements } from './lib/departements.ts'
 import { Cascade, CascadeItem } from './lib/motion.tsx'
+import { TILE_SURFACE } from './lib/surface.ts'
 import { load } from './lib/storage.ts'
 
 type ModeId = 'quiz' | 'entrainement' | 'daily' | 'carte'
@@ -96,7 +98,13 @@ function ModeGrid({ onPick }: ModeGridProps) {
       <CardGrid minItemWidth="15rem" gap="md">
         {MODES.map((m) => (
           <CascadeItem key={m.id} stretch>
-            <Pressable onClick={() => onPick(m.id)} padding="lg" fullWidth ariaLabel={m.title}>
+            <Pressable
+              onClick={() => onPick(m.id)}
+              padding="lg"
+              background={TILE_SURFACE}
+              fullWidth
+              ariaLabel={m.title}
+            >
               <Stack gap="sm" alignItems="start">
                 <Icon name={m.icon} size="lg" color="primary" variant="solid" />
                 <Heading level={3} size={4}>
@@ -152,16 +160,20 @@ export default function App() {
           <SoundToggle />
         </Stack>
 
-        <Stack gap="xs" alignItems="center">
-          <Heading level={1} align="center">
-            Départe<Text as="span" tone="primary" weight="extrabold">Mental</Text>
-          </Heading>
-          <Text variant="lead" tone="muted" align="center">
-            Le jeu pour enfin retenir les {TOTAL} départements
-          </Text>
-        </Stack>
+        <Card variant="floating">
+          <Stack gap="md" alignItems="stretch">
+            <Stack gap="xs" alignItems="center">
+              <Heading level={1} align="center">
+                Départe<Text as="span" tone="primary" weight="extrabold">Mental</Text>
+              </Heading>
+              <Text variant="lead" tone="muted" align="center">
+                Le jeu pour enfin retenir les {TOTAL} départements
+              </Text>
+            </Stack>
 
-        <Progression />
+            <Progression />
+          </Stack>
+        </Card>
 
         <ModeGrid
           onPick={(id) => {

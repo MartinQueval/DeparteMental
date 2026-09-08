@@ -24,7 +24,9 @@ import {
   type Departement,
 } from '../lib/departements.ts'
 import { Cascade, CascadeItem, ViewIn } from '../lib/motion.tsx'
-import { recordAnswer, weakWeight } from '../lib/storage.ts'
+import { TILE_SURFACE } from '../lib/surface.ts'
+import { useDelayedStep } from '../lib/useDelayedStep.ts'
+import { pickWeighted, recordAnswer } from '../lib/storage.ts'
 
 const LIVES = 10
 
@@ -75,17 +77,6 @@ interface Question {
   prompt: string
   answer: string
   options: string[]
-}
-
-/** Pondère le tirage vers les départements les moins maîtrisés. */
-function pickWeighted(pool: Departement[]): Departement {
-  const weights = pool.map((d) => weakWeight(d.code))
-  let r = Math.random() * weights.reduce((a, b) => a + b, 0)
-  for (let i = 0; i < pool.length; i++) {
-    r -= weights[i]
-    if (r <= 0) return pool[i]
-  }
-  return pool[pool.length - 1]
 }
 
 /** Construit 4 choix : la bonne réponse + 3 leurres uniques tirés du pool. */
@@ -181,6 +172,10 @@ interface Result {
   ok: boolean
 }
 
+function livesLabel(count: number): string {
+  return count > 1 ? `${count} vies restantes` : `${count} vie restante`
+}
+
 function choiceState(option: string, answer: string, picked: string | null): CanopChoiceState {
   if (!picked) return 'neutral'
   if (option === answer) return 'correct'
@@ -195,25 +190,33 @@ interface ThemePickerProps {
 function ThemePicker({ onPick }: ThemePickerProps) {
   return (
     <Stack gap="lg" alignItems="stretch">
-      <Stack gap="xs" alignItems="center">
-        <Stack direction="row" gap="sm" alignItems="center">
-          <Icon name="university" variant="solid" size="md" color="primary" />
-          <Heading level={2} align="center" gutterBottom={false}>
-            Entraînement ciblé
-          </Heading>
+      <Card>
+        <Stack gap="xs" alignItems="center">
+          <Stack direction="row" gap="sm" alignItems="center">
+            <Icon name="university" variant="solid" size="md" color="primary" />
+            <Heading level={2} align="center" gutterBottom={false}>
+              Entraînement ciblé
+            </Heading>
+          </Stack>
+          <Text variant="lead" tone="muted" align="center">
+            Choisis un thème et révise-le à fond. Tu as {LIVES} vies : enchaîne les questions tant
+            qu'il t'en reste.
+          </Text>
+          <Lives value={LIVES} max={LIVES} ariaLabel={`${LIVES} vies au départ`} />
         </Stack>
-        <Text variant="lead" tone="muted" align="center">
-          Choisis un thème et révise-le à fond. Tu as {LIVES} vies : enchaîne les questions tant
-          qu'il t'en reste.
-        </Text>
-        <Lives value={LIVES} max={LIVES} ariaLabel={`${LIVES} vies au départ`} />
-      </Stack>
+      </Card>
 
       <Cascade>
         <CardGrid minItemWidth="15rem" gap="md">
           {THEMES.map((t) => (
             <CascadeItem key={t.id} stretch>
-              <Pressable onClick={() => onPick(t.id)} padding="lg" fullWidth ariaLabel={t.title}>
+              <Pressable
+                onClick={() => onPick(t.id)}
+                padding="lg"
+                background={TILE_SURFACE}
+                fullWidth
+                ariaLabel={t.title}
+              >
                 <Stack gap="sm" alignItems="start">
                   <Icon name={t.icon} variant="solid" size="lg" color="primary" />
                   <Heading level={3} size={4} gutterBottom={false}>
@@ -317,7 +320,7 @@ function Play({ index, livesLeft, question, picked, onChoose }: PlayProps) {
         <Text variant="label" tone="muted">
           Question {index + 1}
         </Text>
-        <Lives value={livesLeft} max={LIVES} ariaLabel={`${livesLeft} vies restantes`} />
+        <Lives value={livesLeft} max={LIVES} ariaLabel={livesLabel(livesLeft)} />
       </Stack>
 
       <Card flash={flash}>
@@ -356,6 +359,7 @@ export default function Entrainement() {
   const [results, setResults] = useState<Result[]>([])
   const [finished, setFinished] = useState(false)
   const { play } = useCanopSound()
+  const later = useDelayedStep()
 
   const lostLives = results.filter((r) => !r.ok).length
   const livesLeft = Math.max(0, LIVES - lostLives)
@@ -379,16 +383,19 @@ export default function Entrainement() {
     setResults((r) => [...r, { code: question.dept.code, ok }])
 
     const gameOver = lostLives + (ok ? 0 : 1) >= LIVES
-    setTimeout(() => {
-      if (gameOver) {
-        play('finish')
-        setFinished(true)
-        return
-      }
-      setIndex((i) => i + 1)
-      setPicked(null)
-      setQuestion(makeQuestion(theme))
-    }, ok ? 600 : 1100)
+    later(
+      () => {
+        if (gameOver) {
+          play('finish')
+          setFinished(true)
+          return
+        }
+        setIndex((i) => i + 1)
+        setPicked(null)
+        setQuestion(makeQuestion(theme))
+      },
+      ok ? 600 : 1100
+    )
   }
 
   if (!theme) {

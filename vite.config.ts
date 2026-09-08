@@ -1,10 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-// Les six scenes de `CanopyBackground` (32 Mo) ne peuvent pas traverser le
-// bundle : en mode librairie Vite inline en base64 tout asset importe depuis le
-// JS. Elles sont donc servies comme des fichiers par ce greffon livre avec la
-// librairie -- middleware en developpement, recopie dans la sortie au build.
-// Sans lui, le fond par defaut de `PageScaffold` reste noir.
+// Les six scènes de `CanopyBackground` (32 Mo) ne peuvent pas traverser le
+// bundle : en mode librairie, Vite inline en base64 tout asset importé depuis
+// le JS. Elles sont donc servies comme des fichiers par ce greffon livré avec
+// la librairie — middleware en développement, recopie dans la sortie au build.
+// Sans lui, le fond par défaut de `PageScaffold` reste noir.
 import { canopyVideo } from 'canopui/vite'
 
 export default defineConfig({
