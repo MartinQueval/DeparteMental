@@ -32,6 +32,7 @@ const MASTERED = 'var(--canop-palette-success-main)'
 const AVERAGE = 'var(--canop-palette-warning-main)'
 const WEAK = 'var(--canop-palette-error-main)'
 const REVEALED = 'var(--canop-palette-info-main)'
+const OUTLINE = 'var(--canop-palette-text-disabled)'
 
 const PLAIN_REGIONS: CanopSvgMapRegion[] = franceMap.locations.map(({ id, path }) => ({ id, path }))
 
@@ -76,6 +77,7 @@ function CarteMap({ viewport, regions, fill, selectable = false, onSelect }: Car
       viewport={viewport}
       regions={regions}
       fill={fill}
+      stroke={OUTLINE}
       maxWidth={MAP_MAX_WIDTH}
       selectable={selectable}
       onSelect={onSelect}
