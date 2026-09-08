@@ -1,16 +1,15 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Button,
   Card,
-  CardGrid,
   Choice,
   Heading,
   Icon,
   Lives,
-  Pressable,
   Stack,
   Text,
   useCanopSound,
+  useTranslation,
   type CanopCardFlash,
   type CanopChoiceState,
   type CanopIconName,
@@ -23,8 +22,10 @@ import {
   shuffle,
   type Departement,
 } from '../lib/departements.ts'
+import { ModeHeader } from '../lib/modeHeader.tsx'
 import { Cascade, CascadeItem, ViewIn } from '../lib/motion.tsx'
-import { TILE_SURFACE } from '../lib/surface.ts'
+import { usePlural } from '../lib/plural.ts'
+import { TileGrid, type TileModel } from '../lib/tiles.tsx'
 import { useDelayedStep } from '../lib/useDelayedStep.ts'
 import { pickWeighted, recordAnswer } from '../lib/storage.ts'
 
@@ -32,49 +33,38 @@ const LIVES = 10
 
 type ThemeId = 'prefecture' | 'souspref' | 'code' | 'nom' | 'region'
 
-interface Theme {
+interface ThemeDefinition {
   id: ThemeId
   icon: CanopIconName
-  title: string
-  desc: string
 }
 
-const THEMES: Theme[] = [
-  {
-    id: 'prefecture',
-    icon: 'bank',
-    title: 'Préfectures',
-    desc: 'Quelle ville est la préfecture du département ?',
-  },
-  {
-    id: 'souspref',
-    icon: 'location',
-    title: 'Sous-préfectures',
-    desc: 'Retrouve une sous-préfecture du département.',
-  },
-  {
-    id: 'code',
-    icon: 'tag',
-    title: 'Codes',
-    desc: 'Associe chaque département à son numéro.',
-  },
-  {
-    id: 'nom',
-    icon: 'pencil',
-    title: 'Noms',
-    desc: 'Quel département se cache derrière ce numéro ?',
-  },
-  {
-    id: 'region',
-    icon: 'mapLocation',
-    title: 'Régions',
-    desc: 'Dans quelle région se trouve le département ?',
-  },
+const THEMES: readonly ThemeDefinition[] = [
+  { id: 'prefecture', icon: 'bank' },
+  { id: 'souspref', icon: 'location' },
+  { id: 'code', icon: 'tag' },
+  { id: 'nom', icon: 'pencil' },
+  { id: 'region', icon: 'mapLocation' },
 ]
+
+function useThemeTiles(): TileModel<ThemeId>[] {
+  const { t } = useTranslation()
+
+  return useMemo<TileModel<ThemeId>[]>(
+    () =>
+      THEMES.map(({ id, icon }) => ({
+        id,
+        icon,
+        title: t(`dm.training.theme.${id}.title`),
+        desc: t(`dm.training.theme.${id}.desc`),
+      })),
+    [t]
+  )
+}
 
 interface Question {
   dept: Departement
-  prompt: string
+  promptKey: string
+  promptValue: string
   answer: string
   options: string[]
 }
@@ -103,7 +93,8 @@ function makeQuestion(theme: ThemeId): Question {
     const fallback = departements.flatMap((d) => [d.prefecture, ...d.sousPrefectures])
     return {
       dept,
-      prompt: `Quelle ville est une sous-préfecture de ${dept.nom} (${dept.code}) ?`,
+      promptKey: 'dm.training.prompt.souspref',
+      promptValue: `${dept.nom} (${dept.code})`,
       answer,
       options: buildOptions(
         answer,
@@ -119,7 +110,8 @@ function makeQuestion(theme: ThemeId): Question {
   if (theme === 'prefecture') {
     return {
       dept,
-      prompt: `Quelle est la préfecture de ${dept.nom} (${dept.code}) ?`,
+      promptKey: 'dm.training.prompt.prefecture',
+      promptValue: `${dept.nom} (${dept.code})`,
       answer: dept.prefecture,
       options: buildOptions(
         dept.prefecture,
@@ -132,7 +124,8 @@ function makeQuestion(theme: ThemeId): Question {
   if (theme === 'code') {
     return {
       dept,
-      prompt: `Quel est le numéro du département ${dept.nom} ?`,
+      promptKey: 'dm.training.prompt.code',
+      promptValue: dept.nom,
       answer: dept.code,
       options: buildOptions(
         dept.code,
@@ -145,7 +138,8 @@ function makeQuestion(theme: ThemeId): Question {
   if (theme === 'nom') {
     return {
       dept,
-      prompt: `Quel département porte le numéro ${dept.code} ?`,
+      promptKey: 'dm.training.prompt.nom',
+      promptValue: dept.code,
       answer: dept.nom,
       options: buildOptions(
         dept.nom,
@@ -157,7 +151,8 @@ function makeQuestion(theme: ThemeId): Question {
 
   return {
     dept,
-    prompt: `Dans quelle région se trouve ${dept.nom} (${dept.code}) ?`,
+    promptKey: 'dm.training.prompt.region',
+    promptValue: `${dept.nom} (${dept.code})`,
     answer: dept.region,
     options: buildOptions(
       dept.region,
@@ -172,10 +167,6 @@ interface Result {
   ok: boolean
 }
 
-function livesLabel(count: number): string {
-  return count > 1 ? `${count} vies restantes` : `${count} vie restante`
-}
-
 function choiceState(option: string, answer: string, picked: string | null): CanopChoiceState {
   if (!picked) return 'neutral'
   if (option === answer) return 'correct'
@@ -188,49 +179,24 @@ interface ThemePickerProps {
 }
 
 function ThemePicker({ onPick }: ThemePickerProps) {
+  const { t } = useTranslation()
+  const tiles = useThemeTiles()
+
   return (
     <Stack gap="lg" alignItems="stretch">
-      <Card>
-        <Stack gap="xs" alignItems="center">
-          <Stack direction="row" gap="sm" alignItems="center">
-            <Icon name="university" variant="solid" size="md" color="primary" />
-            <Heading level={2} align="center" gutterBottom={false}>
-              Entraînement ciblé
-            </Heading>
-          </Stack>
-          <Text variant="lead" tone="muted" align="center">
-            Choisis un thème et révise-le à fond. Tu as {LIVES} vies : enchaîne les questions tant
-            qu'il t'en reste.
-          </Text>
-          <Lives value={LIVES} max={LIVES} ariaLabel={`${LIVES} vies au départ`} />
-        </Stack>
-      </Card>
+      <ModeHeader
+        icon="university"
+        title={t('dm.training.title')}
+        description={t('dm.training.intro', { lives: LIVES })}
+      >
+        <Lives
+          value={LIVES}
+          max={LIVES}
+          ariaLabel={t('dm.training.startingLives', { lives: LIVES })}
+        />
+      </ModeHeader>
 
-      <Cascade>
-        <CardGrid minItemWidth="15rem" gap="md">
-          {THEMES.map((t) => (
-            <CascadeItem key={t.id} stretch>
-              <Pressable
-                onClick={() => onPick(t.id)}
-                padding="lg"
-                background={TILE_SURFACE}
-                fullWidth
-                ariaLabel={t.title}
-              >
-                <Stack gap="sm" alignItems="start">
-                  <Icon name={t.icon} variant="solid" size="lg" color="primary" />
-                  <Heading level={3} size={4} gutterBottom={false}>
-                    {t.title}
-                  </Heading>
-                  <Text variant="body-sm" tone="muted">
-                    {t.desc}
-                  </Text>
-                </Stack>
-              </Pressable>
-            </CascadeItem>
-          ))}
-        </CardGrid>
-      </Cascade>
+      <TileGrid tiles={tiles} onPick={onPick} />
     </Stack>
   )
 }
@@ -242,6 +208,8 @@ interface RecapProps {
 }
 
 function Recap({ results, onReplay, onChangeTheme }: RecapProps) {
+  const { t } = useTranslation()
+  const plural = usePlural()
   const ok = results.filter((r) => r.ok).length
 
   return (
@@ -250,18 +218,18 @@ function Recap({ results, onReplay, onChangeTheme }: RecapProps) {
         <Stack gap="xs" alignItems="center">
           <Icon name="star" variant="solid" size="xl" color="warning" />
           <Heading level={2} align="center" gutterBottom={false}>
-            Plus de vies !
+            {t('dm.training.recap.title')}
           </Heading>
           <Text variant="metric" tone="primary">
             {ok}
           </Text>
           <Text variant="body-sm" tone="muted" align="center">
-            bonnes réponses sur {results.length} questions tentées
+            {plural('dm.training.recap.summary', ok, { total: results.length })}
           </Text>
         </Stack>
       </Card>
 
-      <Card title="Récapitulatif">
+      <Card title={t('dm.training.recap.list')}>
         <Stack gap="xs" role="list">
           {results.map((r, i) => {
             const d = byCode[r.code]
@@ -278,7 +246,7 @@ function Recap({ results, onReplay, onChangeTheme }: RecapProps) {
                   variant="solid"
                   size="sm"
                   color={r.ok ? 'success' : 'error'}
-                  title={r.ok ? 'Bonne réponse' : 'Mauvaise réponse'}
+                  title={r.ok ? t('dm.answer.correct') : t('dm.answer.incorrect')}
                 />
                 <Text variant="body-sm">
                   {d.code} — {d.nom}
@@ -290,9 +258,9 @@ function Recap({ results, onReplay, onChangeTheme }: RecapProps) {
       </Card>
 
       <Stack direction="row" gap="sm" justifyContent="center" wrap>
-        <Button onClick={onReplay}>Rejouer ce thème</Button>
+        <Button onClick={onReplay}>{t('dm.training.recap.replay')}</Button>
         <Button variant="ghost" onClick={onChangeTheme}>
-          Changer de thème
+          {t('dm.training.recap.changeTheme')}
         </Button>
       </Stack>
     </Stack>
@@ -308,6 +276,8 @@ interface PlayProps {
 }
 
 function Play({ index, livesLeft, question, picked, onChoose }: PlayProps) {
+  const { t } = useTranslation()
+  const plural = usePlural()
   const flash: CanopCardFlash | undefined = picked
     ? picked === question.answer
       ? 'success'
@@ -317,19 +287,28 @@ function Play({ index, livesLeft, question, picked, onChoose }: PlayProps) {
   return (
     <Stack gap="md" alignItems="stretch">
       <Stack direction="row" gap="sm" alignItems="center" justifyContent="space-between">
-        <Text variant="label" tone="muted">
-          Question {index + 1}
+        <Text variant="body-lg" weight="semibold" tabularNums as="span">
+          {t('dm.training.question', { value: index + 1 })}
         </Text>
-        <Lives value={livesLeft} max={LIVES} ariaLabel={livesLabel(livesLeft)} />
+        <Lives
+          value={livesLeft}
+          max={LIVES}
+          ariaLabel={plural('dm.training.livesLeft', livesLeft)}
+        />
       </Stack>
 
       <Card flash={flash}>
         <Stack gap="md" alignItems="stretch">
           <Heading level={3} size={4} align="center" gutterBottom={false}>
-            {question.prompt}
+            {t(question.promptKey, { value: question.promptValue })}
           </Heading>
           <Cascade key={index}>
-            <Stack gap="sm" alignItems="stretch" role="group" ariaLabel="Réponses proposées">
+            <Stack
+              gap="sm"
+              alignItems="stretch"
+              role="group"
+              ariaLabel={t('dm.training.answers')}
+            >
               {question.options.map((opt) => (
                 <CascadeItem key={opt}>
                   <Choice

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEventHandler, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type FormEventHandler } from 'react'
 import {
   Button,
   Card,
@@ -14,6 +14,7 @@ import {
   Streak,
   Text,
   useCanopSound,
+  useTranslation,
   type CanopCardFlash,
   type CanopChoiceState,
   type CanopSegmentedControlOption,
@@ -26,6 +27,7 @@ import {
   shuffle,
   type Departement,
 } from '../lib/departements.ts'
+import { Emphasis } from '../lib/emphasis.tsx'
 import { Cascade, CascadeItem, ViewIn } from '../lib/motion.tsx'
 import { recordAnswer, getBest, pickWeighted, setBest } from '../lib/storage.ts'
 
@@ -45,7 +47,8 @@ interface Option {
 
 interface Question {
   dept: Departement
-  prompt: ReactNode
+  promptKey: string
+  promptValue: string
   answer: string
   check: (input: string) => boolean
   options?: Option[]
@@ -61,10 +64,17 @@ interface Tally {
   ko: number
 }
 
-const ANSWER_MODES: CanopSegmentedControlOption<AnswerMode>[] = [
-  { value: 'qcm', label: 'QCM' },
-  { value: 'saisie', label: 'Saisie clavier' },
-]
+function useAnswerModes(): CanopSegmentedControlOption<AnswerMode>[] {
+  const { t } = useTranslation()
+
+  return useMemo<CanopSegmentedControlOption<AnswerMode>[]>(
+    () => [
+      { value: 'qcm', label: t('dm.quiz.answerMode.choices') },
+      { value: 'saisie', label: t('dm.quiz.answerMode.typing') },
+    ],
+    [t]
+  )
+}
 
 function makeQuestion(answerMode: AnswerMode): Question {
   const dept = pickWeighted(departements)
@@ -74,7 +84,8 @@ function makeQuestion(answerMode: AnswerMode): Question {
   if (kind === 0) {
     q = {
       dept,
-      prompt: <>Quel département porte le numéro <strong>{dept.code}</strong> ?</>,
+      promptKey: 'dm.quiz.prompt.name',
+      promptValue: dept.code,
       answer: dept.nom,
       check: (input) => matchesNom(input, dept),
     }
@@ -87,7 +98,8 @@ function makeQuestion(answerMode: AnswerMode): Question {
   } else if (kind === 1) {
     q = {
       dept,
-      prompt: <>Quel est le numéro de : <strong>{dept.nom}</strong> ?</>,
+      promptKey: 'dm.quiz.prompt.code',
+      promptValue: dept.nom,
       answer: dept.code,
       check: (input) => matchesCode(input, dept),
     }
@@ -100,7 +112,8 @@ function makeQuestion(answerMode: AnswerMode): Question {
   } else {
     q = {
       dept,
-      prompt: <><strong>{dept.prefecture}</strong> est la préfecture de… ?</>,
+      promptKey: 'dm.quiz.prompt.prefecture',
+      promptValue: dept.prefecture,
       answer: `${dept.nom} (${dept.code})`,
       check: (input) => matchesNom(input, dept) || matchesCode(input, dept),
     }
@@ -130,11 +143,13 @@ interface BestLineProps {
 }
 
 function BestLine({ best }: BestLineProps) {
+  const { t } = useTranslation()
+
   return (
     <Stack direction="row" gap="xs" alignItems="center" justifyContent="center">
       <Icon name="award" size="sm" color="warning" variant="solid" />
       <Text variant="label" tone="muted" as="span">
-        Record : {best} pts
+        {t('dm.quiz.best', { value: best })}
       </Text>
     </Stack>
   )
@@ -147,28 +162,31 @@ interface SetupProps {
 }
 
 function Setup({ answerMode, onAnswerModeChange, onStart }: SetupProps) {
+  const { t } = useTranslation()
+  const answerModes = useAnswerModes()
+
   return (
     <Card radius="xl">
       <Stack gap="lg" alignItems="stretch">
         <Stack gap="xs" alignItems="center">
           <Icon name="lightning" size="xl" color="primary" variant="solid" />
           <Heading level={2} align="center" gutterBottom={false}>
-            Quiz éclair
+            {t('dm.mode.quiz.title')}
           </Heading>
           <Text variant="lead" tone="muted" align="center">
-            {DURATION} secondes. Bonne réponse : +10 pts. Série de 3 : multiplicateur !
+            {t('dm.quiz.setup.rules', { duration: DURATION })}
           </Text>
         </Stack>
 
         <Stack gap="md" alignItems="center">
           <Text variant="label" tone="muted" as="span">
-            Comment veux-tu répondre ?
+            {t('dm.quiz.setup.question')}
           </Text>
           <SegmentedControl
-            options={ANSWER_MODES}
+            options={answerModes}
             value={answerMode}
             onChange={onAnswerModeChange}
-            ariaLabel="Mode de réponse"
+            ariaLabel={t('dm.quiz.answerMode.label')}
             fullWidth
           />
           <Button
@@ -177,7 +195,7 @@ function Setup({ answerMode, onAnswerModeChange, onStart }: SetupProps) {
             onClick={onStart}
             startIcon={<Icon name="play" size="sm" variant="solid" />}
           >
-            Commencer
+            {t('dm.quiz.setup.start')}
           </Button>
         </Stack>
 
@@ -196,16 +214,18 @@ interface HudProps {
 }
 
 function Hud({ game, score, streak, multiplier, onTimeout }: HudProps) {
+  const { t } = useTranslation()
+
   return (
     <Stack gap="xs">
       <Stack direction="row" gap="sm" alignItems="center" justifyContent="space-between">
         <Text variant="label" weight="bold" tabularNums as="span">
-          {score} pts
+          {t('dm.quiz.points', { value: score })}
         </Text>
         <Streak
           value={streak}
           multiplier={multiplier}
-          ariaLabel={`Série de ${streak}, multiplicateur ${multiplier}`}
+          ariaLabel={t('dm.quiz.streak', { value: streak, multiplier })}
         />
       </Stack>
       <Countdown
@@ -252,11 +272,13 @@ interface RevealProps {
 }
 
 function Reveal({ answer }: RevealProps) {
+  const { t } = useTranslation()
+
   return (
     <Stack direction="row" gap="xs" alignItems="center" justifyContent="center">
       <Icon name="close" size="sm" color="error" variant="solid" />
       <Text variant="label" tone="error" weight="bold" as="span">
-        Réponse : {answer}
+        {t('dm.quiz.reveal', { value: answer })}
       </Text>
     </Stack>
   )
@@ -271,11 +293,13 @@ interface TypedAnswerProps {
 }
 
 function TypedAnswer({ round, value, locked, onChange, onSubmit }: TypedAnswerProps) {
+  const { t } = useTranslation()
+
   return (
     <Stack as="form" gap="sm" onSubmit={onSubmit}>
       <Input
         key={round}
-        label="Ta réponse"
+        label={t('dm.quiz.input.label')}
         value={value}
         onChange={onChange}
         disabled={locked}
@@ -288,7 +312,7 @@ function TypedAnswer({ round, value, locked, onChange, onSubmit }: TypedAnswerPr
         disabled={locked}
         endIcon={<Icon name="arrowRight" size="sm" />}
       >
-        Valider
+        {t('dm.quiz.input.submit')}
       </Button>
     </Stack>
   )
@@ -302,6 +326,8 @@ interface DoneProps {
 }
 
 function Done({ score, count, newRecord, onReplay }: DoneProps) {
+  const { t } = useTranslation()
+
   return (
     <Stack gap="lg">
       <Stack gap="xs" alignItems="center">
@@ -312,22 +338,32 @@ function Done({ score, count, newRecord, onReplay }: DoneProps) {
           color={newRecord ? 'warning' : 'primary'}
         />
         <Heading level={2} align="center" gutterBottom={false}>
-          {newRecord ? 'Nouveau record !' : 'Terminé !'}
+          {newRecord ? t('dm.quiz.done.record') : t('dm.quiz.done.title')}
         </Heading>
       </Stack>
 
       <CardGrid minItemWidth="9rem" gap="sm">
         <StatCard
-          label="Score"
-          value={`${score} pts`}
+          label={t('dm.quiz.done.score')}
+          value={t('dm.quiz.points', { value: score })}
           icon="lightning"
           tone={newRecord ? 'success' : 'neutral'}
         />
-        <StatCard label="Bonnes" value={`${count.ok}`} icon="check" iconColor="success" />
-        <StatCard label="Ratées" value={`${count.ko}`} icon="close" iconColor="error" />
         <StatCard
-          label="Record"
-          value={`${getBest('quiz')} pts`}
+          label={t('dm.quiz.done.correct')}
+          value={`${count.ok}`}
+          icon="check"
+          iconColor="success"
+        />
+        <StatCard
+          label={t('dm.quiz.done.missed')}
+          value={`${count.ko}`}
+          icon="close"
+          iconColor="error"
+        />
+        <StatCard
+          label={t('dm.quiz.done.best')}
+          value={t('dm.quiz.points', { value: getBest('quiz') })}
           icon="award"
           iconColor="warning"
         />
@@ -339,7 +375,7 @@ function Done({ score, count, newRecord, onReplay }: DoneProps) {
         onClick={onReplay}
         startIcon={<Icon name="refresh" size="sm" />}
       >
-        Rejouer
+        {t('dm.quiz.done.replay')}
       </Button>
     </Stack>
   )
@@ -358,6 +394,7 @@ export default function Quiz() {
   const [input, setInput] = useState('')
   const [newRecord, setNewRecord] = useState(false)
   const { play } = useCanopSound()
+  const { t } = useTranslation()
 
   const multiplier = 1 + Math.floor(streak / 3)
 
@@ -454,7 +491,7 @@ export default function Quiz() {
         <Card radius="xl" elevation="md" flash={cardFlash(verdict)}>
           <Stack gap="lg">
             <Text variant="lead" align="center">
-              {question.prompt}
+              <Emphasis template={t(question.promptKey)} value={question.promptValue} />
             </Text>
 
             {answerMode === 'qcm' && question.options ? (

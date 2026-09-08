@@ -31,8 +31,11 @@ export default defineConfig({
   optimizeDeps: {
     // Le paquet est monté en lien symbolique : l'optimiseur essayait de le
     // pré-bundler et n'y retrouvait plus son entrée. On le lui laisse tel
-    // quel, ce qui a l'avantage de propager une reconstruction de la
-    // librairie sans vider le cache.
+    // quel. Attention, cela ne suffit pas à propager une reconstruction de
+    // la librairie : le serveur continue de servir les modules qu'il a déjà
+    // transformés, mesuré deux fois. Après un `npm run build` de CanopUI,
+    // relancer avec `--force` (ou supprimer `node_modules/.vite`), sinon
+    // l'écran montre l'ancien code sans le moindre avertissement.
     exclude: ['canopui'],
   },
   server: {

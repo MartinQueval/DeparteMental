@@ -14,6 +14,12 @@ export const byCode: Record<string, Departement> = Object.fromEntries(
   departements.map((d) => [d.code, d])
 )
 
+// Les indices du defi du jour comparent des numeros voisins : entre un 974 et
+// un 01 l'ecart n'a plus de sens, et la proximite geographique non plus. Les
+// cinq departements d'outre-mer sont donc ecartes du tirage quotidien, mais
+// restent jouables dans les autres modes.
+export const metropole: Departement[] = departements.filter((d) => codeValue(d.code) <= 95)
+
 export function codeValue(code: string): number {
   if (code === '2A') return 20.1
   if (code === '2B') return 20.2

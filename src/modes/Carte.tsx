@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import franceMap from '@svg-maps/france.departments'
 import {
   Button,
@@ -6,12 +6,15 @@ import {
   Heading,
   Icon,
   Legend,
+  ProgressBar,
   Stack,
   SvgMap,
   Text,
+  useBreakpointDown,
   useCanopSound,
   useSvgMapViewport,
   useTransientState,
+  useTranslation,
   type CanopCardFlash,
   type CanopSvgMapRegion,
   type UseSvgMapViewportResult,
@@ -22,10 +25,13 @@ import { useDelayedStep } from '../lib/useDelayedStep.ts'
 import { load, recordAnswer, type DeptStats } from '../lib/storage.ts'
 
 const ROUNDS = 10
-const IDF_CODES = ['75', '92', '93', '94', '91', '95', '77', '78']
 const CORRECT_DELAY = 400
 const WRONG_DELAY = 1400
 const MAP_MAX_WIDTH = '34rem'
+const MAP_MAX_HEIGHT = '26rem'
+const MAP_WEIGHT = 2
+const PANEL_WEIGHT = 1
+const PROGRESS_SCALE = 100
 
 const NEUTRAL = 'var(--canop-palette-background-paper)'
 const MASTERED = 'var(--canop-palette-success-main)'
@@ -71,31 +77,72 @@ interface CarteMapProps {
 }
 
 function CarteMap({ viewport, regions, fill, selectable = false, onSelect }: CarteMapProps) {
+  const { t } = useTranslation()
+
   return (
-    <SvgMap
-      viewBox={franceMap.viewBox}
-      viewport={viewport}
-      regions={regions}
-      fill={fill}
-      stroke={OUTLINE}
-      maxWidth={MAP_MAX_WIDTH}
-      selectable={selectable}
-      onSelect={onSelect}
-      ariaLabel="Carte des départements français"
-      overlay={
-        <Button size="small" variant="secondary" onClick={() => viewport.fitTo(IDF_CODES)}>
-          IDF
-        </Button>
-      }
-    />
+    <Card radius="xl" density="dense" fill>
+      <Stack justifyContent="center" fill>
+        <SvgMap
+          viewBox={franceMap.viewBox}
+          viewport={viewport}
+          regions={regions}
+          fill={fill}
+          stroke={OUTLINE}
+          maxWidth={MAP_MAX_WIDTH}
+          maxHeight={MAP_MAX_HEIGHT}
+          selectable={selectable}
+          onSelect={onSelect}
+          ariaLabel={t('dm.carte.mapLabel')}
+        />
+      </Stack>
+    </Card>
   )
 }
 
 function CarteAide() {
+  const { t } = useTranslation()
+
   return (
-    <Text variant="caption" align="center">
-      Pince pour zoomer · glisse pour te déplacer · « IDF » pour la région parisienne
-    </Text>
+    <Stack direction="row" gap="xs" alignItems="center" justifyContent="center" wrap>
+      <Icon name="info" size="sm" color="neutral" />
+      <Text variant="caption" tone="muted" align="center" as="span">
+        {t('dm.carte.hint')}
+      </Text>
+    </Stack>
+  )
+}
+
+interface CarteBoardProps {
+  panel: ReactNode
+  map: ReactNode
+}
+
+function CarteColumns({ panel, map }: CarteBoardProps) {
+  return (
+    <Stack direction="row" gap="md" alignItems="stretch">
+      <Stack weight={PANEL_WEIGHT}>{panel}</Stack>
+      <Stack weight={MAP_WEIGHT}>{map}</Stack>
+    </Stack>
+  )
+}
+
+function CarteRows({ panel, map }: CarteBoardProps) {
+  return (
+    <Stack gap="md" alignItems="stretch">
+      {panel}
+      {map}
+    </Stack>
+  )
+}
+
+function CarteBoard({ panel, map }: CarteBoardProps) {
+  const stacked = useBreakpointDown('sm')
+
+  return (
+    <Stack gap="sm" alignItems="stretch">
+      {stacked ? <CarteRows panel={panel} map={map} /> : <CarteColumns panel={panel} map={map} />}
+      <CarteAide />
+    </Stack>
   )
 }
 
@@ -105,35 +152,42 @@ interface CarteSetupProps {
 
 function CarteSetup({ onChoose }: CarteSetupProps) {
   const { play } = useCanopSound()
+  const { t } = useTranslation()
+  const compact = useBreakpointDown('sm')
 
   return (
-    <Card>
-      <Stack gap="md" alignItems="stretch">
-        <Stack direction="row" gap="sm" alignItems="center">
-          <Icon name="mapLocation" size="lg" color="primary" variant="solid" />
-          <Heading level={2} size={3} gutterBottom={false}>
-            Carte de France
+    <Card radius="xl">
+      <Stack gap="lg" alignItems="stretch">
+        <Stack gap="xs" alignItems="center">
+          <Icon name="mapLocation" size="xl" color="primary" variant="solid" />
+          <Heading level={2} size={compact ? 4 : 3} align="center" gutterBottom={false}>
+            {t('dm.carte.title')}
           </Heading>
+          <Text variant="lead" tone="muted" align="center">
+            {t('dm.carte.intro')}
+          </Text>
         </Stack>
-        <Stack direction="row" gap="sm" wrap>
+        <Stack direction="row" gap="sm" justifyContent="center" alignItems="center" wrap>
           <Button
+            size="large"
             startIcon={<Icon name="locationCheck" size="sm" />}
             onClick={() => {
               play('start')
               onChoose('jeu')
             }}
           >
-            Jouer ({ROUNDS} départements à localiser)
+            {t('dm.carte.play', { count: ROUNDS })}
           </Button>
           <Button
             variant="secondary"
+            size="large"
             startIcon={<Icon name="mapLocation" size="sm" />}
             onClick={() => {
               play('click')
               onChoose('heatmap')
             }}
           >
-            Ma heatmap de progression
+            {t('dm.carte.heatmap')}
           </Button>
         </Stack>
       </Stack>
@@ -149,28 +203,35 @@ interface CarteConsigneProps {
 }
 
 function CarteConsigne({ round, score, target, flash }: CarteConsigneProps) {
+  const { t } = useTranslation()
+  const compact = useBreakpointDown('sm')
+
   return (
-    <Card density="dense" flash={flash}>
-      <Stack gap="sm" alignItems="stretch">
-        <Stack direction="row" gap="md" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" gap="xs" alignItems="center">
-            <Icon name="locationCheck" size="sm" />
-            <Text variant="label" tone="muted">
+    <Card radius="xl" flash={flash} fill>
+      <Stack gap="lg" alignItems="stretch" justifyContent="center" fill>
+        <Stack gap="xs" alignItems="stretch">
+          <Stack direction="row" gap="md" justifyContent="space-between" alignItems="center">
+            <Text variant="label" tone="muted" tabularNums as="span">
               {round + 1}/{ROUNDS}
             </Text>
+            <Stack direction="row" gap="xs" alignItems="center">
+              <Icon name="check" size="sm" color="success" variant="solid" />
+              <Text variant="label" weight="bold" tabularNums as="span">
+                {score}
+              </Text>
+            </Stack>
           </Stack>
-          <Stack direction="row" gap="xs" alignItems="center">
-            <Icon name="check" size="sm" color="success" />
-            <Text variant="label" weight="bold">
-              {score}
-            </Text>
-          </Stack>
+          <ProgressBar
+            value={(round / ROUNDS) * PROGRESS_SCALE}
+            ariaLabel={t('dm.carte.progress', { value: round + 1, max: ROUNDS })}
+          />
         </Stack>
+
         <Stack gap="xs" alignItems="center">
-          <Text variant="overline" tone="muted">
-            Clique sur
+          <Text variant="overline" tone="muted" as="span">
+            {t('dm.carte.clickOn')}
           </Text>
-          <Heading level={3} size={4} align="center" gutterBottom={false}>
+          <Heading level={3} size={compact ? 5 : 4} align="center" gutterBottom={false}>
             {target.nom} ({target.code})
           </Heading>
         </Stack>
@@ -185,17 +246,21 @@ interface CarteResultatProps {
 }
 
 function CarteResultat({ score, onRestart }: CarteResultatProps) {
+  const { t } = useTranslation()
+
   return (
-    <Card>
-      <Stack gap="sm" alignItems="center">
+    <Card variant="floating" radius="xl" fill>
+      <Stack gap="sm" alignItems="center" justifyContent="center" fill>
         <Icon name="locationCheck" size="xl" color="accent" variant="solid" />
-        <Heading level={3} size={3} align="center" gutterBottom={false}>
+        <Heading level={3} size={2} align="center" gutterBottom={false}>
           {score} / {ROUNDS}
         </Heading>
         <Text variant="body-sm" tone="muted" align="center">
-          départements localisés
+          {t('dm.carte.located')}
         </Text>
-        <Button onClick={onRestart}>Rejouer</Button>
+        <Button onClick={onRestart} startIcon={<Icon name="refresh" size="sm" />}>
+          {t('dm.carte.replay')}
+        </Button>
       </Stack>
     </Card>
   )
@@ -304,20 +369,51 @@ function CarteJeu() {
   const { viewport, round, score, finished, target, fill, flash, answer, restart } = useCarteJeu()
 
   return (
-    <Stack gap="md" alignItems="stretch">
-      {finished && <CarteResultat score={score} onRestart={restart} />}
-      {!finished && target && (
-        <CarteConsigne round={round} score={score} target={target} flash={flash} />
-      )}
-      <CarteMap
-        viewport={viewport}
-        regions={PLAIN_REGIONS}
-        fill={fill}
-        selectable={!finished}
-        onSelect={answer}
-      />
-      <CarteAide />
-    </Stack>
+    <CarteBoard
+      panel={
+        finished || !target ? (
+          <CarteResultat score={score} onRestart={restart} />
+        ) : (
+          <CarteConsigne round={round} score={score} target={target} flash={flash} />
+        )
+      }
+      map={
+        <CarteMap
+          viewport={viewport}
+          regions={PLAIN_REGIONS}
+          fill={fill}
+          selectable={!finished}
+          onSelect={answer}
+        />
+      }
+    />
+  )
+}
+
+function CarteHeatmapPanel() {
+  const { t } = useTranslation()
+
+  return (
+    <Card radius="xl" fill>
+      <Stack gap="md" alignItems="stretch" justifyContent="center" fill>
+        <Stack direction="row" gap="sm" alignItems="center">
+          <Icon name="mapLocation" size="lg" color="primary" variant="solid" />
+          <Heading level={3} size={4} gutterBottom={false}>
+            {t('dm.carte.heatmap')}
+          </Heading>
+        </Stack>
+        <Legend
+          items={[
+            { tone: 'success', label: t('dm.carte.legend.mastered') },
+            { tone: 'warning', label: t('dm.carte.legend.average') },
+            { tone: 'error', label: t('dm.carte.legend.weak') },
+          ]}
+        />
+        <Text variant="caption" tone="muted">
+          {t('dm.carte.legend.hint')}
+        </Text>
+      </Stack>
+    </Card>
   )
 }
 
@@ -327,24 +423,10 @@ function CarteHeatmap() {
   const fill = useCallback((id: string) => heatFill(id, stats), [stats])
 
   return (
-    <Stack gap="md" alignItems="stretch">
-      <Card density="dense">
-        <Stack gap="xs" alignItems="stretch">
-          <Legend
-            items={[
-              { tone: 'success', label: 'maîtrisé' },
-              { tone: 'warning', label: 'moyen' },
-              { tone: 'error', label: 'à bosser' },
-            ]}
-          />
-          <Text variant="caption" tone="muted">
-            Les départements restés sans couleur n'ont jamais été croisés.
-          </Text>
-        </Stack>
-      </Card>
-      <CarteMap viewport={viewport} regions={NAMED_REGIONS} fill={fill} />
-      <CarteAide />
-    </Stack>
+    <CarteBoard
+      panel={<CarteHeatmapPanel />}
+      map={<CarteMap viewport={viewport} regions={NAMED_REGIONS} fill={fill} />}
+    />
   )
 }
 

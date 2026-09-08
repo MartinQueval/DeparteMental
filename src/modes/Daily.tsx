@@ -1,8 +1,9 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import {
   Autocomplete,
   Button,
   Card,
+  CardGrid,
   DescriptionList,
   Feedback,
   foldForSearch,
@@ -13,25 +14,30 @@ import {
   Text,
   useCanopSound,
   useTransientState,
+  useTranslation,
   type CanopAutocompleteOption,
   type CanopCardFlash,
   type CanopDescriptionItem,
   type CanopIconName,
   type CanopShareTone,
+  type CanopTranslate,
 } from 'canopui'
 import {
   byCode,
   codeValue,
-  departements,
+  metropole,
   normalize,
   type Departement,
 } from '../lib/departements.ts'
+import { Emphasis } from '../lib/emphasis.tsx'
+import { ModeHeader } from '../lib/modeHeader.tsx'
 import { Cascade, CascadeItem, ViewIn } from '../lib/motion.tsx'
 import { getDaily, setDaily, recordAnswer, type DailyState } from '../lib/storage.ts'
 
 const MAX_GUESSES = 6
 const FLASH_DURATION = 1200
 const NEAR_CODE_DISTANCE = 10
+const BOARD_MIN_COLUMN_WIDTH = '22rem'
 
 const toneEmoji: Record<CanopShareTone, string> = {
   hit: '🟩',
@@ -54,7 +60,7 @@ function dailyDept(dateKey: string): Departement {
     h ^= c.charCodeAt(0)
     h = Math.imul(h, 16777619)
   }
-  return departements[Math.abs(h) % departements.length]
+  return metropole[Math.abs(h) % metropole.length]
 }
 
 interface Hint {
@@ -63,37 +69,135 @@ interface Hint {
   value: string
 }
 
-function hints(target: Departement, wrongCount: number): Hint[] {
-  const all: Hint[] = [
-    { icon: 'location', label: 'Région', value: target.region },
-    { icon: 'pencil', label: 'Première lettre du nom', value: `« ${target.nom[0]} »` },
-    { icon: null, label: 'Longueur du nom', value: `${target.nom.length} caractères` },
+function hintList(target: Departement, t: CanopTranslate): Hint[] {
+  return [
+    { icon: 'location', label: t('dm.daily.field.region'), value: target.region },
+    {
+      icon: 'pencil',
+      label: t('dm.daily.field.firstLetter'),
+      value: t('dm.daily.quoted', { value: target.nom[0] }),
+    },
+    {
+      icon: null,
+      label: t('dm.daily.field.nameLength'),
+      value: t('dm.daily.nameLengthValue', { count: target.nom.length }),
+    },
     {
       icon: 'bank',
-      label: 'Première lettre de la préfecture',
-      value: `« ${target.prefecture[0]} »`,
+      label: t('dm.daily.field.prefectureFirstLetter'),
+      value: t('dm.daily.quoted', { value: target.prefecture[0] }),
     },
-    { icon: 'bank', label: 'Préfecture', value: target.prefecture },
+    { icon: 'bank', label: t('dm.daily.field.prefecture'), value: target.prefecture },
   ]
-  return all.slice(0, wrongCount)
 }
 
-function hintItems(target: Departement, wrongCount: number): CanopDescriptionItem[] {
-  return hints(target, wrongCount).map(({ icon, label, value }) => ({
-    label,
-    value: (
-      <Stack direction="row" gap="xs" alignItems="center">
-        {icon && <Icon name={icon} size="sm" color="primary" />}
-        <Text variant="body-sm">{value}</Text>
+interface RevealedHints {
+  latest?: Hint
+  previous: Hint[]
+  revealed: number
+  total: number
+}
+
+function useRevealedHints(target: Departement, wrongCount: number): RevealedHints {
+  const { t } = useTranslation()
+
+  return useMemo(() => {
+    const all = hintList(target, t)
+    const revealed = all.slice(0, wrongCount)
+    return {
+      latest: revealed[revealed.length - 1],
+      previous: revealed.slice(0, -1),
+      revealed: revealed.length,
+      total: all.length,
+    }
+  }, [target, t, wrongCount])
+}
+
+interface HintValueProps {
+  hint: Hint
+  emphasis?: boolean
+}
+
+function HintValue({ hint, emphasis = false }: HintValueProps) {
+  return (
+    <Stack direction="row" gap="xs" alignItems="center" wrap>
+      {hint.icon && (
+        <Icon
+          name={hint.icon}
+          size="sm"
+          color="primary"
+          variant={emphasis ? 'solid' : 'outline'}
+        />
+      )}
+      <Text
+        variant={emphasis ? 'body-md' : 'body-sm'}
+        weight={emphasis ? 'semibold' : undefined}
+      >
+        {hint.value}
+      </Text>
+    </Stack>
+  )
+}
+
+interface LatestHintProps {
+  hint: Hint
+  revealed: number
+  total: number
+}
+
+function LatestHint({ hint, revealed, total }: LatestHintProps) {
+  const { t } = useTranslation()
+
+  return (
+    <Card variant="stat" radius="lg" density="dense">
+      <Stack gap="xs">
+        <Stack direction="row" gap="sm" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" gap="xs" alignItems="center">
+            <Icon name="lightbulb" size="sm" color="primary" variant="solid" />
+            <Text variant="overline" tone="muted" as="span">
+              {t('dm.daily.hint.latest')}
+            </Text>
+          </Stack>
+          <Text variant="caption" tone="muted" tabularNums as="span">
+            {revealed}/{total}
+          </Text>
+        </Stack>
+        <Text variant="caption" tone="muted" as="span">
+          {hint.label}
+        </Text>
+        <HintValue hint={hint} emphasis />
       </Stack>
-    ),
-  }))
+    </Card>
+  )
 }
 
-function resultItems(target: Departement): CanopDescriptionItem[] {
-  const items: CanopDescriptionItem[] = [{ label: 'Préfecture', value: target.prefecture }]
+interface PreviousHintsProps {
+  hints: Hint[]
+}
+
+function PreviousHints({ hints }: PreviousHintsProps) {
+  const { t } = useTranslation()
+  const items: CanopDescriptionItem[] = hints.map((hint) => ({
+    label: hint.label,
+    value: <HintValue hint={hint} />,
+  }))
+
+  return (
+    <Card title={t('dm.daily.hint.previous')} density="dense">
+      <DescriptionList items={items} />
+    </Card>
+  )
+}
+
+function resultItems(target: Departement, t: CanopTranslate): CanopDescriptionItem[] {
+  const items: CanopDescriptionItem[] = [
+    { label: t('dm.daily.field.prefecture'), value: target.prefecture },
+  ]
   if (target.sousPrefectures.length > 0) {
-    items.push({ label: 'Sous-préfectures', value: target.sousPrefectures.join(', ') })
+    items.push({
+      label: t('dm.daily.field.subPrefectures'),
+      value: target.sousPrefectures.join(', '),
+    })
   }
   return items
 }
@@ -124,6 +228,7 @@ interface GuessRowProps {
 }
 
 function GuessRow({ guess, target, flash }: GuessRowProps) {
+  const { t } = useTranslation()
   const d = byCode[guess]
   const exact = d.code === target.code
   const sameRegion = d.region === target.region
@@ -141,7 +246,11 @@ function GuessRow({ guess, target, flash }: GuessRowProps) {
               <Icon name={codeDiff > 0 ? 'arrowUp' : 'arrowDown'} size="sm" />
             )}
             <Text variant="body-sm" tone="muted">
-              {exact ? 'code exact' : codeDiff > 0 ? 'n° plus grand' : 'n° plus petit'}
+              {exact
+                ? t('dm.daily.guess.exact')
+                : codeDiff > 0
+                  ? t('dm.daily.guess.higher')
+                  : t('dm.daily.guess.lower')}
             </Text>
           </Stack>
           <Stack direction="row" gap="xs" alignItems="center">
@@ -151,7 +260,7 @@ function GuessRow({ guess, target, flash }: GuessRowProps) {
               color={sameRegion ? 'success' : 'error'}
             />
             <Text variant="body-sm" tone="muted">
-              région
+              {t('dm.daily.guess.region')}
             </Text>
           </Stack>
         </Stack>
@@ -167,80 +276,167 @@ interface GuessListProps {
 }
 
 function GuessList({ guesses, target, flash }: GuessListProps) {
+  const { t } = useTranslation()
   const last = guesses.length - 1
 
   return (
-    <Cascade>
-      <Stack gap="xs">
-        {guesses.map((guess, index) => (
-          <CascadeItem key={guess}>
-            <GuessRow
-              guess={guess}
-              target={target}
-              flash={index === last ? flash : undefined}
-            />
-          </CascadeItem>
-        ))}
-      </Stack>
-    </Cascade>
+    <Stack gap="xs">
+      <Text variant="overline" tone="muted" as="span">
+        {t('dm.daily.history')}
+      </Text>
+      <Cascade>
+        <Stack gap="xs">
+          {guesses.map((guess, index) => (
+            <CascadeItem key={guess}>
+              <GuessRow
+                guess={guess}
+                target={target}
+                flash={index === last ? flash : undefined}
+              />
+            </CascadeItem>
+          ))}
+        </Stack>
+      </Cascade>
+    </Stack>
   )
 }
 
-interface DailyResultProps {
+interface DailyFormProps {
+  options: CanopAutocompleteOption[]
+  code: string
+  input: string
+  attempt: number
+  errorKey: string
+  onCodeChange: (value: string) => void
+  onInputChange: (value: string) => void
+  onSubmit: (event: FormEvent) => void
+  onDismissError: () => void
+}
+
+function DailyForm({
+  options,
+  code,
+  input,
+  attempt,
+  errorKey,
+  onCodeChange,
+  onInputChange,
+  onSubmit,
+  onDismissError,
+}: DailyFormProps) {
+  const { t } = useTranslation()
+
+  return (
+    <Stack as="form" gap="sm" onSubmit={onSubmit}>
+      <Autocomplete
+        options={options}
+        value={code}
+        onChange={onCodeChange}
+        inputValue={input}
+        onInputChange={onInputChange}
+        normalize={tolerant}
+        ariaLabel={t('dm.daily.input.label')}
+        placeholder={t('dm.daily.input.placeholder', { current: attempt, max: MAX_GUESSES })}
+        fullWidth
+      />
+      <Button type="submit" fullWidth>
+        {t('dm.daily.input.submit')}
+      </Button>
+      <Feedback severity="error" onClose={onDismissError}>
+        {errorKey && t(errorKey)}
+      </Feedback>
+    </Stack>
+  )
+}
+
+interface DailyOutcomeProps {
   state: DailyState
   target: Departement
   dateKey: string
 }
 
-function DailyResult({ state, target, dateKey }: DailyResultProps) {
+function DailyOutcome({ state, target, dateKey }: DailyOutcomeProps) {
+  const { t } = useTranslation()
   const rows = useMemo(() => shareRows(state.guesses, target), [state.guesses, target])
+  const answer = `${target.nom} (${target.code})`
 
   return (
-    <Stack gap="md">
-      <Card tone={state.won ? 'success' : 'error'}>
+    <Card tone={state.won ? 'success' : 'error'} radius="xl">
+      <Stack gap="md" alignItems="center">
         <Stack gap="xs" alignItems="center">
+          <Icon
+            name={state.won ? 'star' : 'location'}
+            size="lg"
+            variant="solid"
+            color={state.won ? 'accent' : 'error'}
+          />
+          <Heading level={3} size={4} align="center" gutterBottom={false}>
+            {state.won ? t('dm.daily.won') : t('dm.daily.lost')}
+          </Heading>
           {state.won ? (
-            <>
-              <Stack direction="row" gap="xs" alignItems="center">
-                <Icon name="star" size="md" color="accent" variant="solid" />
-                <Heading level={3} size={3} gutterBottom={false}>
-                  Bravo !
-                </Heading>
-              </Stack>
-              <Text variant="metric">
-                {state.guesses.length}/{MAX_GUESSES}
-              </Text>
-            </>
+            <Heading level={4} size={3} align="center" gutterBottom={false}>
+              {answer}
+            </Heading>
           ) : (
-            <>
-              <Heading level={3} size={3} gutterBottom={false}>
-                Raté !
-              </Heading>
-              <Text>
-                C’était{' '}
-                <Text as="span" weight="bold">
-                  {target.nom} ({target.code})
-                </Text>
-              </Text>
-            </>
+            <Text variant="lead" align="center">
+              <Emphasis template={t('dm.daily.answerWas')} value={answer} />
+            </Text>
           )}
+          <Text variant="metric">
+            {state.guesses.length}/{MAX_GUESSES}
+          </Text>
         </Stack>
-      </Card>
-
-      <Card title="Le département du jour" density="dense">
-        <DescriptionList items={resultItems(target)} />
-      </Card>
-
-      <ShareResult rows={rows} text={shareText(rows, state, dateKey)} />
-
-      <Text variant="body-sm" align="center">
-        Reviens demain pour un nouveau département !
-      </Text>
-    </Stack>
+        <ShareResult rows={rows} text={shareText(rows, state, dateKey)} />
+      </Stack>
+    </Card>
   )
 }
 
-export default function Daily() {
+interface DailyDetailsProps {
+  target: Departement
+}
+
+function DailyDetails({ target }: DailyDetailsProps) {
+  const { t } = useTranslation()
+
+  return (
+    <Card title={t('dm.daily.result.title')} density="dense">
+      <DescriptionList items={resultItems(target, t)} />
+    </Card>
+  )
+}
+
+interface DailyBoardProps {
+  primary: ReactNode
+  secondary?: ReactNode
+}
+
+function DailyBoard({ primary, secondary }: DailyBoardProps) {
+  return (
+    <CardGrid minItemWidth={BOARD_MIN_COLUMN_WIDTH} gap="md">
+      <Stack gap="md">{primary}</Stack>
+      {secondary ? <Stack gap="md">{secondary}</Stack> : null}
+    </CardGrid>
+  )
+}
+
+interface UseDailyResult {
+  dateKey: string
+  target: Departement
+  state: DailyState
+  code: string
+  input: string
+  errorKey: string
+  flash: CanopCardFlash | undefined
+  options: CanopAutocompleteOption[]
+  wrongCount: number
+  pickCode: (value: string) => void
+  changeInput: (text: string) => void
+  submit: (event: FormEvent) => void
+  dismissError: () => void
+}
+
+function useDaily(): UseDailyResult {
   const dateKey = todayKey()
   const target = useMemo(() => dailyDept(dateKey), [dateKey])
   const [state, setState] = useState<DailyState>(
@@ -248,7 +444,7 @@ export default function Daily() {
   )
   const [code, setCode] = useState('')
   const [input, setInput] = useState('')
-  const [error, setError] = useState('')
+  const [errorKey, setErrorKey] = useState('')
   const { play } = useCanopSound()
   const { value: flash, show: showFlash } = useTransientState<CanopCardFlash | undefined>(
     undefined,
@@ -256,7 +452,7 @@ export default function Daily() {
   )
 
   const options = useMemo<CanopAutocompleteOption[]>(
-    () => departements.map((d) => ({ value: d.code, label: d.nom })),
+    () => metropole.map((d) => ({ value: d.code, label: d.nom })),
     []
   )
 
@@ -269,14 +465,14 @@ export default function Daily() {
     event.preventDefault()
     const found = code ? byCode[code] : undefined
     if (!found) {
-      setError('Département inconnu — choisis dans la liste !')
+      setErrorKey('dm.daily.error.unknown')
       return
     }
     if (state.guesses.includes(found.code)) {
-      setError('Déjà essayé !')
+      setErrorKey('dm.daily.error.duplicate')
       return
     }
-    setError('')
+    setErrorKey('')
     setCode('')
     setInput('')
     const guesses = [...state.guesses, found.code]
@@ -290,55 +486,93 @@ export default function Daily() {
     setDaily(dateKey, next)
   }
 
-  const wrongCount = state.guesses.filter((c) => c !== target.code).length
+  return {
+    dateKey,
+    target,
+    state,
+    code,
+    input,
+    errorKey,
+    flash,
+    options,
+    wrongCount: state.guesses.filter((c) => c !== target.code).length,
+    pickCode: setCode,
+    changeInput,
+    submit,
+    dismissError: () => setErrorKey(''),
+  }
+}
+
+export default function Daily() {
+  const { t } = useTranslation()
+  const {
+    dateKey,
+    target,
+    state,
+    code,
+    input,
+    errorKey,
+    flash,
+    options,
+    wrongCount,
+    pickCode,
+    changeInput,
+    submit,
+    dismissError,
+  } = useDaily()
+  const { latest, previous, revealed, total } = useRevealedHints(target, wrongCount)
+  const played = state.guesses.length > 0
 
   return (
     <ViewIn>
       <Stack gap="lg">
-        <Card>
-          <Stack gap="xs">
-            <Stack direction="row" gap="xs" alignItems="center">
-              <Icon name="calendar" size="md" color="primary" />
-              <Heading level={2} gutterBottom={false}>
-                Défi du jour
-              </Heading>
-            </Stack>
-            <Text tone="muted">Devine le département mystère en {MAX_GUESSES} essais max.</Text>
-          </Stack>
-        </Card>
-
-        {wrongCount > 0 && (
-          <Card title="Indices" density="dense">
-            <DescriptionList items={hintItems(target, Math.min(wrongCount, 5))} />
-          </Card>
-        )}
-
-        {state.guesses.length > 0 && (
-          <GuessList guesses={state.guesses} target={target} flash={flash} />
-        )}
+        <ModeHeader
+          icon="calendar"
+          title={t('dm.mode.daily.title')}
+          description={t('dm.daily.instructions', { max: MAX_GUESSES })}
+          denseOnMobile
+        />
 
         {state.done ? (
-          <DailyResult state={state} target={target} dateKey={dateKey} />
+          <DailyBoard
+            primary={<DailyOutcome state={state} target={target} dateKey={dateKey} />}
+            secondary={
+              <>
+                <DailyDetails target={target} />
+                <GuessList guesses={state.guesses} target={target} flash={flash} />
+                <Text variant="body-sm" tone="muted" align="center">
+                  {t('dm.daily.comeBack')}
+                </Text>
+              </>
+            }
+          />
         ) : (
-          <Stack as="form" gap="sm" onSubmit={submit}>
-            <Autocomplete
-              options={options}
-              value={code}
-              onChange={setCode}
-              inputValue={input}
-              onInputChange={changeInput}
-              normalize={tolerant}
-              ariaLabel="Département"
-              placeholder={`Essai ${state.guesses.length + 1}/${MAX_GUESSES}…`}
-              fullWidth
-            />
-            <Button type="submit" fullWidth>
-              Deviner
-            </Button>
-            <Feedback severity="error" onClose={() => setError('')}>
-              {error}
-            </Feedback>
-          </Stack>
+          <DailyBoard
+            primary={
+              <>
+                <DailyForm
+                  options={options}
+                  code={code}
+                  input={input}
+                  attempt={state.guesses.length + 1}
+                  errorKey={errorKey}
+                  onCodeChange={pickCode}
+                  onInputChange={changeInput}
+                  onSubmit={submit}
+                  onDismissError={dismissError}
+                />
+                {latest && <LatestHint hint={latest} revealed={revealed} total={total} />}
+              </>
+            }
+            secondary={
+              played ? (
+                <>
+                  {previous.length > 0 && <PreviousHints hints={previous} />}
+                  <GuessList guesses={state.guesses} target={target} flash={flash} />
+                </>
+              ) : null
+            }
+          />
         )}
       </Stack>
     </ViewIn>
