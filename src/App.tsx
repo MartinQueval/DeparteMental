@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import {
   CardGrid,
   Heading,
@@ -11,7 +10,6 @@ import {
   Stack,
   Text,
   useCanopSound,
-  useStagger,
   type CanopIconName,
 } from 'canopui'
 import Quiz from './modes/Quiz.tsx'
@@ -19,6 +17,7 @@ import Entrainement from './modes/Entrainement.tsx'
 import Daily from './modes/Daily.tsx'
 import Carte from './modes/Carte.tsx'
 import { departements } from './lib/departements.ts'
+import { Cascade, CascadeItem } from './lib/motion.tsx'
 import { load } from './lib/storage.ts'
 
 type ModeId = 'quiz' | 'entrainement' | 'daily' | 'carte'
@@ -67,8 +66,6 @@ const MODE_COMPONENTS: Record<ModeId, () => React.JSX.Element | null> = {
 
 const TOTAL = departements.length
 
-const STRETCH = { display: 'flex' } as const
-
 function maitrises(): number {
   const { stats } = load()
   return departements.filter((d) => {
@@ -94,13 +91,11 @@ interface ModeGridProps {
 }
 
 function ModeGrid({ onPick }: ModeGridProps) {
-  const cascade = useStagger()
-
   return (
-    <motion.div {...cascade.container}>
+    <Cascade>
       <CardGrid minItemWidth="15rem" gap="md">
         {MODES.map((m) => (
-          <motion.div key={m.id} variants={cascade.item.variants} style={STRETCH}>
+          <CascadeItem key={m.id} stretch>
             <Pressable onClick={() => onPick(m.id)} padding="lg" fullWidth ariaLabel={m.title}>
               <Stack gap="sm" alignItems="start">
                 <Icon name={m.icon} size="lg" color="primary" variant="solid" />
@@ -112,10 +107,10 @@ function ModeGrid({ onPick }: ModeGridProps) {
                 </Text>
               </Stack>
             </Pressable>
-          </motion.div>
+          </CascadeItem>
         ))}
       </CardGrid>
-    </motion.div>
+    </Cascade>
   )
 }
 

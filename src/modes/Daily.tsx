@@ -1,5 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
-import { motion } from 'framer-motion'
+import { useMemo, useState, type FormEvent } from 'react'
 import {
   Autocomplete,
   Button,
@@ -13,8 +12,6 @@ import {
   Stack,
   Text,
   useCanopSound,
-  useEnterAnimation,
-  useStagger,
   useTransientState,
   type CanopAutocompleteOption,
   type CanopCardFlash,
@@ -29,6 +26,7 @@ import {
   normalize,
   type Departement,
 } from '../lib/departements.ts'
+import { Cascade, CascadeItem, ViewIn } from '../lib/motion.tsx'
 import { getDaily, setDaily, recordAnswer, type DailyState } from '../lib/storage.ts'
 
 const MAX_GUESSES = 6
@@ -39,20 +37,6 @@ const toneEmoji: Record<CanopShareTone, string> = {
   hit: '🟩',
   near: '🟨',
   miss: '⬛',
-}
-
-interface ViewInProps {
-  children: ReactNode
-}
-
-function ViewIn({ children }: ViewInProps) {
-  const enter = useEnterAnimation()
-
-  return (
-    <motion.div initial={enter.initial} animate={enter.animate} transition={enter.transition}>
-      {children}
-    </motion.div>
-  )
 }
 
 function tolerant(text: string): string {
@@ -183,23 +167,22 @@ interface GuessListProps {
 }
 
 function GuessList({ guesses, target, flash }: GuessListProps) {
-  const cascade = useStagger()
   const last = guesses.length - 1
 
   return (
-    <motion.div {...cascade.container}>
+    <Cascade>
       <Stack gap="xs">
         {guesses.map((guess, index) => (
-          <motion.div key={guess} variants={cascade.item.variants}>
+          <CascadeItem key={guess}>
             <GuessRow
               guess={guess}
               target={target}
               flash={index === last ? flash : undefined}
             />
-          </motion.div>
+          </CascadeItem>
         ))}
       </Stack>
-    </motion.div>
+    </Cascade>
   )
 }
 

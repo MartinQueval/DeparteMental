@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { motion } from 'framer-motion'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import franceMap from '@svg-maps/france.departments'
 import {
   Button,
@@ -11,12 +10,12 @@ import {
   SvgMap,
   Text,
   useCanopSound,
-  useEnterAnimation,
   useSvgMapViewport,
   type CanopSvgMapRegion,
   type UseSvgMapViewportResult,
 } from 'canopui'
 import { byCode, shuffle, type Departement } from '../lib/departements.ts'
+import { ViewIn } from '../lib/motion.tsx'
 import { load, recordAnswer, type DeptStats } from '../lib/storage.ts'
 
 const ROUNDS = 10
@@ -48,20 +47,6 @@ const RESULT_FILL: Record<CellResult, string> = {
   ok: MASTERED,
   ko: WEAK,
   target: REVEALED,
-}
-
-interface ViewInProps {
-  children: ReactNode
-}
-
-function ViewIn({ children }: ViewInProps) {
-  const enter = useEnterAnimation()
-
-  return (
-    <motion.div initial={enter.initial} animate={enter.animate} transition={enter.transition}>
-      {children}
-    </motion.div>
-  )
 }
 
 function heatFill(code: string, stats: Record<string, DeptStats>): string {

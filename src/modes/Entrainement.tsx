@@ -1,5 +1,4 @@
-import { useState, type ReactNode } from 'react'
-import { motion } from 'framer-motion'
+import { useState } from 'react'
 import {
   Button,
   Card,
@@ -12,8 +11,6 @@ import {
   Stack,
   Text,
   useCanopSound,
-  useEnterAnimation,
-  useStagger,
   type CanopCardFlash,
   type CanopChoiceState,
   type CanopIconName,
@@ -26,6 +23,7 @@ import {
   shuffle,
   type Departement,
 } from '../lib/departements.ts'
+import { Cascade, CascadeItem, ViewIn } from '../lib/motion.tsx'
 import { recordAnswer, weakWeight } from '../lib/storage.ts'
 
 const LIVES = 10
@@ -71,22 +69,6 @@ const THEMES: Theme[] = [
     desc: 'Dans quelle région se trouve le département ?',
   },
 ]
-
-const STRETCH = { display: 'flex' } as const
-
-interface ViewInProps {
-  children: ReactNode
-}
-
-function ViewIn({ children }: ViewInProps) {
-  const enter = useEnterAnimation()
-
-  return (
-    <motion.div initial={enter.initial} animate={enter.animate} transition={enter.transition}>
-      {children}
-    </motion.div>
-  )
-}
 
 interface Question {
   dept: Departement
@@ -211,8 +193,6 @@ interface ThemePickerProps {
 }
 
 function ThemePicker({ onPick }: ThemePickerProps) {
-  const cascade = useStagger()
-
   return (
     <Stack gap="lg" alignItems="stretch">
       <Stack gap="xs" alignItems="center">
@@ -229,10 +209,10 @@ function ThemePicker({ onPick }: ThemePickerProps) {
         <Lives value={LIVES} max={LIVES} ariaLabel={`${LIVES} vies au départ`} />
       </Stack>
 
-      <motion.div {...cascade.container}>
+      <Cascade>
         <CardGrid minItemWidth="15rem" gap="md">
           {THEMES.map((t) => (
-            <motion.div key={t.id} variants={cascade.item.variants} style={STRETCH}>
+            <CascadeItem key={t.id} stretch>
               <Pressable onClick={() => onPick(t.id)} padding="lg" fullWidth ariaLabel={t.title}>
                 <Stack gap="sm" alignItems="start">
                   <Icon name={t.icon} variant="solid" size="lg" color="primary" />
@@ -244,10 +224,10 @@ function ThemePicker({ onPick }: ThemePickerProps) {
                   </Text>
                 </Stack>
               </Pressable>
-            </motion.div>
+            </CascadeItem>
           ))}
         </CardGrid>
-      </motion.div>
+      </Cascade>
     </Stack>
   )
 }
@@ -325,7 +305,6 @@ interface PlayProps {
 }
 
 function Play({ index, livesLeft, question, picked, onChoose }: PlayProps) {
-  const cascade = useStagger()
   const flash: CanopCardFlash | undefined = picked
     ? picked === question.answer
       ? 'success'
@@ -346,10 +325,10 @@ function Play({ index, livesLeft, question, picked, onChoose }: PlayProps) {
           <Heading level={3} size={4} align="center" gutterBottom={false}>
             {question.prompt}
           </Heading>
-          <motion.div key={index} {...cascade.container}>
+          <Cascade key={index}>
             <Stack gap="sm" alignItems="stretch" role="group" ariaLabel="Réponses proposées">
               {question.options.map((opt) => (
-                <motion.div key={opt} variants={cascade.item.variants}>
+                <CascadeItem key={opt}>
                   <Choice
                     state={choiceState(opt, question.answer, picked)}
                     disabled={picked !== null}
@@ -359,10 +338,10 @@ function Play({ index, livesLeft, question, picked, onChoose }: PlayProps) {
                       {opt}
                     </Text>
                   </Choice>
-                </motion.div>
+                </CascadeItem>
               ))}
             </Stack>
-          </motion.div>
+          </Cascade>
         </Stack>
       </Card>
     </Stack>

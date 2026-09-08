@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEventHandler, type ReactNode } from 'react'
-import { motion } from 'framer-motion'
 import {
   Button,
   Card,
@@ -15,8 +14,6 @@ import {
   Streak,
   Text,
   useCanopSound,
-  useEnterAnimation,
-  useStagger,
   type CanopCardFlash,
   type CanopChoiceState,
   type CanopSegmentedControlOption,
@@ -29,6 +26,7 @@ import {
   shuffle,
   type Departement,
 } from '../lib/departements.ts'
+import { Cascade, CascadeItem, ViewIn } from '../lib/motion.tsx'
 import { recordAnswer, getBest, setBest, weakWeight } from '../lib/storage.ts'
 
 const DURATION = 60
@@ -67,22 +65,6 @@ const ANSWER_MODES: CanopSegmentedControlOption<AnswerMode>[] = [
   { value: 'qcm', label: 'QCM' },
   { value: 'saisie', label: 'Saisie clavier' },
 ]
-
-const STRETCH = { display: 'flex' } as const
-
-interface ViewInProps {
-  children: ReactNode
-}
-
-function ViewIn({ children }: ViewInProps) {
-  const enter = useEnterAnimation()
-
-  return (
-    <motion.div initial={enter.initial} animate={enter.animate} transition={enter.transition}>
-      {children}
-    </motion.div>
-  )
-}
 
 function pickWeighted(): Departement {
   const weights = departements.map((d) => weakWeight(d.code))
@@ -254,13 +236,11 @@ interface ChoicesProps {
 }
 
 function Choices({ round, options, verdict, onAnswer }: ChoicesProps) {
-  const cascade = useStagger()
-
   return (
-    <motion.div key={round} {...cascade.container}>
+    <Cascade key={round}>
       <CardGrid minItemWidth="12rem" gap="sm">
         {options.map((option) => (
-          <motion.div key={option.label} variants={cascade.item.variants} style={STRETCH}>
+          <CascadeItem key={option.label} stretch>
             <Choice
               state={choiceState(option, verdict)}
               disabled={verdict !== null}
@@ -270,10 +250,10 @@ function Choices({ round, options, verdict, onAnswer }: ChoicesProps) {
                 {option.label}
               </Text>
             </Choice>
-          </motion.div>
+          </CascadeItem>
         ))}
       </CardGrid>
-    </motion.div>
+    </Cascade>
   )
 }
 
