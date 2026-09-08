@@ -1,16 +1,20 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { motion } from 'framer-motion'
 import {
   Autocomplete,
   Button,
   Card,
   DescriptionList,
   Feedback,
+  foldForSearch,
   Heading,
   Icon,
   ShareResult,
   Stack,
   Text,
   useCanopSound,
+  useEnterAnimation,
+  useStagger,
   useTransientState,
   type CanopAutocompleteOption,
   type CanopCardFlash,
@@ -35,6 +39,24 @@ const toneEmoji: Record<CanopShareTone, string> = {
   hit: '🟩',
   near: '🟨',
   miss: '⬛',
+}
+
+interface ViewInProps {
+  children: ReactNode
+}
+
+function ViewIn({ children }: ViewInProps) {
+  const enter = useEnterAnimation()
+
+  return (
+    <motion.div initial={enter.initial} animate={enter.animate} transition={enter.transition}>
+      {children}
+    </motion.div>
+  )
+}
+
+function tolerant(text: string): string {
+  return foldForSearch(text).replace(/\bst\b/g, 'saint')
 }
 
 function todayKey(): string {
@@ -154,6 +176,33 @@ function GuessRow({ guess, target, flash }: GuessRowProps) {
   )
 }
 
+interface GuessListProps {
+  guesses: string[]
+  target: Departement
+  flash?: CanopCardFlash
+}
+
+function GuessList({ guesses, target, flash }: GuessListProps) {
+  const cascade = useStagger()
+  const last = guesses.length - 1
+
+  return (
+    <motion.div {...cascade.container}>
+      <Stack gap="xs">
+        {guesses.map((guess, index) => (
+          <motion.div key={guess} variants={cascade.item.variants}>
+            <GuessRow
+              guess={guess}
+              target={target}
+              flash={index === last ? flash : undefined}
+            />
+          </motion.div>
+        ))}
+      </Stack>
+    </motion.div>
+  )
+}
+
 interface DailyResultProps {
   state: DailyState
   target: Departement
@@ -259,61 +308,54 @@ export default function Daily() {
   }
 
   const wrongCount = state.guesses.filter((c) => c !== target.code).length
-  const lastGuess = state.guesses.length - 1
 
   return (
-    <Stack gap="lg">
-      <Stack gap="xs">
-        <Stack direction="row" gap="xs" alignItems="center">
-          <Icon name="calendar" size="md" color="primary" />
-          <Heading level={2} gutterBottom={false}>
-            Défi du jour
-          </Heading>
-        </Stack>
-        <Text tone="muted">Devine le département mystère en {MAX_GUESSES} essais max.</Text>
-      </Stack>
-
-      {wrongCount > 0 && (
-        <Card title="Indices" density="dense">
-          <DescriptionList items={hintItems(target, Math.min(wrongCount, 5))} />
-        </Card>
-      )}
-
-      {state.guesses.length > 0 && (
+    <ViewIn>
+      <Stack gap="lg">
         <Stack gap="xs">
-          {state.guesses.map((g, index) => (
-            <GuessRow
-              key={g}
-              guess={g}
-              target={target}
-              flash={index === lastGuess ? flash : undefined}
-            />
-          ))}
+          <Stack direction="row" gap="xs" alignItems="center">
+            <Icon name="calendar" size="md" color="primary" />
+            <Heading level={2} gutterBottom={false}>
+              Défi du jour
+            </Heading>
+          </Stack>
+          <Text tone="muted">Devine le département mystère en {MAX_GUESSES} essais max.</Text>
         </Stack>
-      )}
 
-      {state.done ? (
-        <DailyResult state={state} target={target} dateKey={dateKey} />
-      ) : (
-        <Stack as="form" gap="sm" onSubmit={submit}>
-          <Autocomplete
-            options={options}
-            value={code}
-            onChange={setCode}
-            inputValue={input}
-            onInputChange={changeInput}
-            ariaLabel="Département"
-            placeholder={`Essai ${state.guesses.length + 1}/${MAX_GUESSES}…`}
-            fullWidth
-          />
-          <Button type="submit" fullWidth>
-            Deviner
-          </Button>
-          <Feedback severity="error" onClose={() => setError('')}>
-            {error}
-          </Feedback>
-        </Stack>
-      )}
-    </Stack>
+        {wrongCount > 0 && (
+          <Card title="Indices" density="dense">
+            <DescriptionList items={hintItems(target, Math.min(wrongCount, 5))} />
+          </Card>
+        )}
+
+        {state.guesses.length > 0 && (
+          <GuessList guesses={state.guesses} target={target} flash={flash} />
+        )}
+
+        {state.done ? (
+          <DailyResult state={state} target={target} dateKey={dateKey} />
+        ) : (
+          <Stack as="form" gap="sm" onSubmit={submit}>
+            <Autocomplete
+              options={options}
+              value={code}
+              onChange={setCode}
+              inputValue={input}
+              onInputChange={changeInput}
+              normalize={tolerant}
+              ariaLabel="Département"
+              placeholder={`Essai ${state.guesses.length + 1}/${MAX_GUESSES}…`}
+              fullWidth
+            />
+            <Button type="submit" fullWidth>
+              Deviner
+            </Button>
+            <Feedback severity="error" onClose={() => setError('')}>
+              {error}
+            </Feedback>
+          </Stack>
+        )}
+      </Stack>
+    </ViewIn>
   )
 }

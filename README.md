@@ -7,7 +7,7 @@ Le jeu pour enfin retenir les 101 départements français : codes, noms, préfec
 ## Modes de jeu
 
 - ⚡ **Quiz éclair** — 60 secondes, QCM ou saisie clavier, streak avec multiplicateur
-- 🃏 **Flashcards** — répétition espacée (boîtes de Leitner) alimentée par tes erreurs dans tous les modes
+- 📚 **Entraînement** — un thème au choix (préfectures, sous-préfectures, codes, noms, régions), 10 vies, questions à la chaîne tirées vers tes points faibles
 - 📅 **Défi du jour** — un département mystère par jour, indices progressifs, résultat partageable
 - 🗺️ **Carte** — localiser les départements sur la carte de France + heatmap de progression
 

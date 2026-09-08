@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import Box from '@mui/material/Box'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { motion } from 'framer-motion'
 import franceMap from '@svg-maps/france.departments'
 import {
   Button,
@@ -11,6 +11,7 @@ import {
   SvgMap,
   Text,
   useCanopSound,
+  useEnterAnimation,
   useSvgMapViewport,
   type CanopSvgMapRegion,
   type UseSvgMapViewportResult,
@@ -49,6 +50,20 @@ const RESULT_FILL: Record<CellResult, string> = {
   target: REVEALED,
 }
 
+interface ViewInProps {
+  children: ReactNode
+}
+
+function ViewIn({ children }: ViewInProps) {
+  const enter = useEnterAnimation()
+
+  return (
+    <motion.div initial={enter.initial} animate={enter.animate} transition={enter.transition}>
+      {children}
+    </motion.div>
+  )
+}
+
 function heatFill(code: string, stats: Record<string, DeptStats>): string {
   const stat = stats[code]
   if (!stat) return NEUTRAL
@@ -84,22 +99,21 @@ interface CarteMapProps {
 
 function CarteMap({ viewport, regions, fill, selectable = false, onSelect }: CarteMapProps) {
   return (
-    <Box sx={{ width: '100%', maxWidth: MAP_MAX_WIDTH, marginInline: 'auto' }}>
-      <SvgMap
-        viewBox={franceMap.viewBox}
-        viewport={viewport}
-        regions={regions}
-        fill={fill}
-        selectable={selectable}
-        onSelect={onSelect}
-        ariaLabel="Carte des départements français"
-        overlay={
-          <Button size="small" variant="secondary" onClick={() => viewport.fitTo(IDF_CODES)}>
-            IDF
-          </Button>
-        }
-      />
-    </Box>
+    <SvgMap
+      viewBox={franceMap.viewBox}
+      viewport={viewport}
+      regions={regions}
+      fill={fill}
+      maxWidth={MAP_MAX_WIDTH}
+      selectable={selectable}
+      onSelect={onSelect}
+      ariaLabel="Carte des départements français"
+      overlay={
+        <Button size="small" variant="secondary" onClick={() => viewport.fitTo(IDF_CODES)}>
+          IDF
+        </Button>
+      }
+    />
   )
 }
 
@@ -346,7 +360,25 @@ function CarteHeatmap() {
 export default function Carte() {
   const [mode, setMode] = useState<CarteMode | null>(null)
 
-  if (!mode) return <CarteSetup onChoose={setMode} />
-  if (mode === 'jeu') return <CarteJeu />
-  return <CarteHeatmap />
+  if (!mode) {
+    return (
+      <ViewIn key="setup">
+        <CarteSetup onChoose={setMode} />
+      </ViewIn>
+    )
+  }
+
+  if (mode === 'jeu') {
+    return (
+      <ViewIn key="jeu">
+        <CarteJeu />
+      </ViewIn>
+    )
+  }
+
+  return (
+    <ViewIn key="heatmap">
+      <CarteHeatmap />
+    </ViewIn>
+  )
 }

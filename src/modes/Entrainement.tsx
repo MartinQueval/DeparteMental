@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
+import { motion } from 'framer-motion'
 import {
   Button,
   Card,
@@ -11,6 +12,8 @@ import {
   Stack,
   Text,
   useCanopSound,
+  useEnterAnimation,
+  useStagger,
   type CanopCardFlash,
   type CanopChoiceState,
   type CanopIconName,
@@ -68,6 +71,22 @@ const THEMES: Theme[] = [
     desc: 'Dans quelle région se trouve le département ?',
   },
 ]
+
+const STRETCH = { display: 'flex' } as const
+
+interface ViewInProps {
+  children: ReactNode
+}
+
+function ViewIn({ children }: ViewInProps) {
+  const enter = useEnterAnimation()
+
+  return (
+    <motion.div initial={enter.initial} animate={enter.animate} transition={enter.transition}>
+      {children}
+    </motion.div>
+  )
+}
 
 interface Question {
   dept: Departement
@@ -192,6 +211,8 @@ interface ThemePickerProps {
 }
 
 function ThemePicker({ onPick }: ThemePickerProps) {
+  const cascade = useStagger()
+
   return (
     <Stack gap="lg" alignItems="stretch">
       <Stack gap="xs" alignItems="center">
@@ -208,27 +229,25 @@ function ThemePicker({ onPick }: ThemePickerProps) {
         <Lives value={LIVES} max={LIVES} ariaLabel={`${LIVES} vies au départ`} />
       </Stack>
 
-      <CardGrid minItemWidth="15rem" gap="md">
-        {THEMES.map((t) => (
-          <Pressable
-            key={t.id}
-            onClick={() => onPick(t.id)}
-            padding="lg"
-            fullWidth
-            ariaLabel={t.title}
-          >
-            <Stack gap="sm" alignItems="start">
-              <Icon name={t.icon} variant="solid" size="lg" color="primary" />
-              <Heading level={3} size={4} gutterBottom={false}>
-                {t.title}
-              </Heading>
-              <Text variant="body-sm" tone="muted">
-                {t.desc}
-              </Text>
-            </Stack>
-          </Pressable>
-        ))}
-      </CardGrid>
+      <motion.div {...cascade.container}>
+        <CardGrid minItemWidth="15rem" gap="md">
+          {THEMES.map((t) => (
+            <motion.div key={t.id} variants={cascade.item.variants} style={STRETCH}>
+              <Pressable onClick={() => onPick(t.id)} padding="lg" fullWidth ariaLabel={t.title}>
+                <Stack gap="sm" alignItems="start">
+                  <Icon name={t.icon} variant="solid" size="lg" color="primary" />
+                  <Heading level={3} size={4} gutterBottom={false}>
+                    {t.title}
+                  </Heading>
+                  <Text variant="body-sm" tone="muted">
+                    {t.desc}
+                  </Text>
+                </Stack>
+              </Pressable>
+            </motion.div>
+          ))}
+        </CardGrid>
+      </motion.div>
     </Stack>
   )
 }
@@ -306,6 +325,7 @@ interface PlayProps {
 }
 
 function Play({ index, livesLeft, question, picked, onChoose }: PlayProps) {
+  const cascade = useStagger()
   const flash: CanopCardFlash | undefined = picked
     ? picked === question.answer
       ? 'success'
@@ -326,20 +346,23 @@ function Play({ index, livesLeft, question, picked, onChoose }: PlayProps) {
           <Heading level={3} size={4} align="center" gutterBottom={false}>
             {question.prompt}
           </Heading>
-          <Stack gap="sm" alignItems="stretch" role="group" ariaLabel="Réponses proposées">
-            {question.options.map((opt) => (
-              <Choice
-                key={opt}
-                state={choiceState(opt, question.answer, picked)}
-                disabled={picked !== null}
-                onClick={() => onChoose(opt)}
-              >
-                <Text variant="body-md" as="span">
-                  {opt}
-                </Text>
-              </Choice>
-            ))}
-          </Stack>
+          <motion.div key={index} {...cascade.container}>
+            <Stack gap="sm" alignItems="stretch" role="group" ariaLabel="Réponses proposées">
+              {question.options.map((opt) => (
+                <motion.div key={opt} variants={cascade.item.variants}>
+                  <Choice
+                    state={choiceState(opt, question.answer, picked)}
+                    disabled={picked !== null}
+                    onClick={() => onChoose(opt)}
+                  >
+                    <Text variant="body-md" as="span">
+                      {opt}
+                    </Text>
+                  </Choice>
+                </motion.div>
+              ))}
+            </Stack>
+          </motion.div>
         </Stack>
       </Card>
     </Stack>
@@ -389,30 +412,40 @@ export default function Entrainement() {
     }, ok ? 600 : 1100)
   }
 
-  if (!theme) return <ThemePicker onPick={start} />
+  if (!theme) {
+    return (
+      <ViewIn key="themes">
+        <ThemePicker onPick={start} />
+      </ViewIn>
+    )
+  }
 
   if (finished) {
     return (
-      <Recap
-        results={results}
-        onReplay={() => start(theme)}
-        onChangeTheme={() => {
-          play('click')
-          setTheme(null)
-        }}
-      />
+      <ViewIn key="recap">
+        <Recap
+          results={results}
+          onReplay={() => start(theme)}
+          onChangeTheme={() => {
+            play('click')
+            setTheme(null)
+          }}
+        />
+      </ViewIn>
     )
   }
 
   if (!question) return null
 
   return (
-    <Play
-      index={index}
-      livesLeft={livesLeft}
-      question={question}
-      picked={picked}
-      onChoose={choose}
-    />
+    <ViewIn key="play">
+      <Play
+        index={index}
+        livesLeft={livesLeft}
+        question={question}
+        picked={picked}
+        onChoose={choose}
+      />
+    </ViewIn>
   )
 }

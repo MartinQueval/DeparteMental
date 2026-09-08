@@ -1,20 +1,22 @@
 import { useEffect, useState, type FormEventHandler, type ReactNode } from 'react'
+import { motion } from 'framer-motion'
 import {
   Button,
   Card,
   CardGrid,
   Choice,
+  Countdown,
   Heading,
   Icon,
   Input,
-  ProgressBar,
   SegmentedControl,
   Stack,
   StatCard,
   Streak,
   Text,
   useCanopSound,
-  useCountdown,
+  useEnterAnimation,
+  useStagger,
   type CanopCardFlash,
   type CanopChoiceState,
   type CanopSegmentedControlOption,
@@ -65,6 +67,22 @@ const ANSWER_MODES: CanopSegmentedControlOption<AnswerMode>[] = [
   { value: 'qcm', label: 'QCM' },
   { value: 'saisie', label: 'Saisie clavier' },
 ]
+
+const STRETCH = { display: 'flex' } as const
+
+interface ViewInProps {
+  children: ReactNode
+}
+
+function ViewIn({ children }: ViewInProps) {
+  const enter = useEnterAnimation()
+
+  return (
+    <motion.div initial={enter.initial} animate={enter.animate} transition={enter.transition}>
+      {children}
+    </motion.div>
+  )
+}
 
 function pickWeighted(): Departement {
   const weights = departements.map((d) => weakWeight(d.code))
@@ -198,36 +216,17 @@ function Setup({ answerMode, onAnswerModeChange, onStart }: SetupProps) {
 }
 
 interface HudProps {
-  remaining: number
-  seconds: number
+  game: number
   score: number
   streak: number
   multiplier: number
+  onTimeout: () => void
 }
 
-function Hud({ remaining, seconds, score, streak, multiplier }: HudProps) {
-  const urgent = seconds <= URGENT_SECONDS
-
+function Hud({ game, score, streak, multiplier, onTimeout }: HudProps) {
   return (
     <Stack gap="xs">
       <Stack direction="row" gap="sm" alignItems="center" justifyContent="space-between">
-        <Stack direction="row" gap="xs" alignItems="center">
-          <Icon
-            name="timer"
-            size="sm"
-            variant={urgent ? 'solid' : 'outline'}
-            color={urgent ? 'error' : 'primary'}
-          />
-          <Text
-            variant="label"
-            weight="bold"
-            tone={urgent ? 'error' : 'default'}
-            tabularNums
-            as="span"
-          >
-            {seconds}s
-          </Text>
-        </Stack>
         <Text variant="label" weight="bold" tabularNums as="span">
           {score} pts
         </Text>
@@ -237,40 +236,44 @@ function Hud({ remaining, seconds, score, streak, multiplier }: HudProps) {
           ariaLabel={`Série de ${streak}, multiplicateur ${multiplier}`}
         />
       </Stack>
-      <ProgressBar
-        value={(remaining / DURATION_MS) * 100}
-        color={urgent ? 'error' : 'primary'}
-        ariaLabel={`${seconds} secondes restantes`}
+      <Countdown
+        key={game}
+        duration={DURATION_MS}
+        urgentBelow={URGENT_SECONDS}
+        onEnd={onTimeout}
       />
     </Stack>
   )
 }
 
 interface ChoicesProps {
+  round: number
   options: Option[]
   verdict: Verdict | null
   onAnswer: (option: Option) => void
 }
 
-function Choices({ options, verdict, onAnswer }: ChoicesProps) {
+function Choices({ round, options, verdict, onAnswer }: ChoicesProps) {
+  const cascade = useStagger()
+
   return (
-    <CardGrid minItemWidth="12rem" gap="sm">
-      {options.map((option) => {
-        const state = choiceState(option, verdict)
-        return (
-          <Choice
-            key={option.label}
-            state={state}
-            disabled={verdict !== null && state === 'neutral'}
-            onClick={() => onAnswer(option)}
-          >
-            <Text variant="body-md" as="span">
-              {option.label}
-            </Text>
-          </Choice>
-        )
-      })}
-    </CardGrid>
+    <motion.div key={round} {...cascade.container}>
+      <CardGrid minItemWidth="12rem" gap="sm">
+        {options.map((option) => (
+          <motion.div key={option.label} variants={cascade.item.variants} style={STRETCH}>
+            <Choice
+              state={choiceState(option, verdict)}
+              disabled={verdict !== null}
+              onClick={() => onAnswer(option)}
+            >
+              <Text variant="body-md" as="span">
+                {option.label}
+              </Text>
+            </Choice>
+          </motion.div>
+        ))}
+      </CardGrid>
+    </motion.div>
   )
 }
 
@@ -380,22 +383,13 @@ export default function Quiz() {
   const [count, setCount] = useState<Tally>({ ok: 0, ko: 0 })
   const [question, setQuestion] = useState<Question | null>(null)
   const [round, setRound] = useState(0)
+  const [game, setGame] = useState(0)
   const [verdict, setVerdict] = useState<Verdict | null>(null)
   const [input, setInput] = useState('')
   const [newRecord, setNewRecord] = useState(false)
   const { play } = useCanopSound()
 
   const multiplier = 1 + Math.floor(streak / 3)
-
-  const { seconds, remaining, restart } = useCountdown({
-    duration: DURATION_MS,
-    running: phase === 'play',
-    onEnd: () => {
-      setNewRecord(setBest('quiz', score))
-      play('finish')
-      setPhase('done')
-    },
-  })
 
   useEffect(() => {
     if (!verdict) return
@@ -421,8 +415,14 @@ export default function Quiz() {
     setNewRecord(false)
     setQuestion(makeQuestion(answerMode))
     setRound((value) => value + 1)
-    restart()
+    setGame((value) => value + 1)
     setPhase('play')
+  }
+
+  function endGame() {
+    setNewRecord(setBest('quiz', score))
+    play('finish')
+    setPhase('done')
   }
 
   function answer(ok: boolean, chosen?: string) {
@@ -447,58 +447,67 @@ export default function Quiz() {
   }
 
   if (phase === 'setup') {
-    return <Setup answerMode={answerMode} onAnswerModeChange={setAnswerMode} onStart={start} />
+    return (
+      <ViewIn key="setup">
+        <Setup answerMode={answerMode} onAnswerModeChange={setAnswerMode} onStart={start} />
+      </ViewIn>
+    )
   }
 
   if (phase === 'done') {
     return (
-      <Done
-        score={score}
-        count={count}
-        newRecord={newRecord}
-        onReplay={() => setPhase('setup')}
-      />
+      <ViewIn key="done">
+        <Done
+          score={score}
+          count={count}
+          newRecord={newRecord}
+          onReplay={() => setPhase('setup')}
+        />
+      </ViewIn>
     )
   }
 
   if (!question) return null
 
   return (
-    <Stack gap="md">
-      <Hud
-        remaining={remaining}
-        seconds={seconds}
-        score={score}
-        streak={streak}
-        multiplier={multiplier}
-      />
+    <ViewIn key="play">
+      <Stack gap="md">
+        <Hud
+          game={game}
+          score={score}
+          streak={streak}
+          multiplier={multiplier}
+          onTimeout={endGame}
+        />
 
-      <Card radius="xl" elevation="md" flash={cardFlash(verdict)}>
-        <Stack gap="lg">
-          <Text variant="lead" align="center">
-            {question.prompt}
-          </Text>
+        <Card radius="xl" elevation="md" flash={cardFlash(verdict)}>
+          <Stack gap="lg">
+            <Text variant="lead" align="center">
+              {question.prompt}
+            </Text>
 
-          {answerMode === 'qcm' && question.options ? (
-            <Choices
-              options={question.options}
-              verdict={verdict}
-              onAnswer={(option) => answer(option.ok, option.label)}
-            />
-          ) : (
-            <Stack gap="sm">
-              {verdict && !verdict.ok && <Reveal answer={question.answer} />}
-              <TypedAnswer
+            {answerMode === 'qcm' && question.options ? (
+              <Choices
                 round={round}
-                value={input}
-                locked={verdict !== null}
-                onChange={setInput}
-                onSubmit={submitTyped}
+                options={question.options}
+                verdict={verdict}
+                onAnswer={(option) => answer(option.ok, option.label)}
               />
-            </Stack>
-          )}
-        </Stack>
-      </Card>
-    </Stack>
+            ) : (
+              <Stack gap="sm">
+                {verdict && !verdict.ok && <Reveal answer={question.answer} />}
+                <TypedAnswer
+                  round={round}
+                  value={input}
+                  locked={verdict !== null}
+                  onChange={setInput}
+                  onSubmit={submitTyped}
+                />
+              </Stack>
+            )}
+          </Stack>
+        </Card>
+      </Stack>
+    </ViewIn>
   )
 }

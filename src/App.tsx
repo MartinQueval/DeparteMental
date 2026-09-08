@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import {
   CardGrid,
   Heading,
@@ -10,6 +11,7 @@ import {
   Stack,
   Text,
   useCanopSound,
+  useStagger,
   type CanopIconName,
 } from 'canopui'
 import Quiz from './modes/Quiz.tsx'
@@ -65,6 +67,8 @@ const MODE_COMPONENTS: Record<ModeId, () => React.JSX.Element | null> = {
 
 const TOTAL = departements.length
 
+const STRETCH = { display: 'flex' } as const
+
 function maitrises(): number {
   const { stats } = load()
   return departements.filter((d) => {
@@ -82,6 +86,36 @@ function Progression() {
       max={TOTAL}
       label={`${acquis} / ${TOTAL} départements maîtrisés`}
     />
+  )
+}
+
+interface ModeGridProps {
+  onPick: (id: ModeId) => void
+}
+
+function ModeGrid({ onPick }: ModeGridProps) {
+  const cascade = useStagger()
+
+  return (
+    <motion.div {...cascade.container}>
+      <CardGrid minItemWidth="15rem" gap="md">
+        {MODES.map((m) => (
+          <motion.div key={m.id} variants={cascade.item.variants} style={STRETCH}>
+            <Pressable onClick={() => onPick(m.id)} padding="lg" fullWidth ariaLabel={m.title}>
+              <Stack gap="sm" alignItems="start">
+                <Icon name={m.icon} size="lg" color="primary" variant="solid" />
+                <Heading level={3} size={4}>
+                  {m.title}
+                </Heading>
+                <Text variant="body-sm" tone="muted">
+                  {m.desc}
+                </Text>
+              </Stack>
+            </Pressable>
+          </motion.div>
+        ))}
+      </CardGrid>
+    </motion.div>
   )
 }
 
@@ -110,9 +144,7 @@ export default function App() {
             </Pressable>
             <SoundToggle />
           </Stack>
-          <div key={view}>
-            <Mode />
-          </div>
+          <Mode key={view} />
         </Stack>
       </PageContent>
     )
@@ -136,30 +168,12 @@ export default function App() {
 
         <Progression />
 
-        <CardGrid minItemWidth="15rem" gap="md">
-          {MODES.map((m) => (
-            <Pressable
-              key={m.id}
-              onClick={() => {
-                play('start')
-                setView(m.id)
-              }}
-              padding="lg"
-              fullWidth
-              ariaLabel={m.title}
-            >
-              <Stack gap="sm" alignItems="start">
-                <Icon name={m.icon} size="lg" color="primary" variant="solid" />
-                <Heading level={3} size={4}>
-                  {m.title}
-                </Heading>
-                <Text variant="body-sm" tone="muted">
-                  {m.desc}
-                </Text>
-              </Stack>
-            </Pressable>
-          ))}
-        </CardGrid>
+        <ModeGrid
+          onPick={(id) => {
+            play('start')
+            setView(id)
+          }}
+        />
       </Stack>
     </PageContent>
   )
