@@ -5,6 +5,7 @@ import {
   Heading,
   Icon,
   PageContent,
+  PageScaffold,
   Pressable,
   ProgressBar,
   SoundToggle,
@@ -12,6 +13,7 @@ import {
   Text,
   useCanopSound,
   type CanopIconName,
+  type CanopNavbarItem,
 } from 'canopui'
 import Quiz from './modes/Quiz.tsx'
 import Entrainement from './modes/Entrainement.tsx'
@@ -67,6 +69,18 @@ const MODE_COMPONENTS: Record<ModeId, () => React.JSX.Element | null> = {
 }
 
 const TOTAL = departements.length
+const GAME_TITLE = 'DéparteMental'
+const HOME_HREF = '/'
+const HOME_TAGLINE = `Le jeu pour enfin retenir les ${TOTAL} départements`
+
+function modeHref(id: ModeId): string {
+  return `/${id}`
+}
+
+const NAV_ITEMS: CanopNavbarItem[] = [
+  { label: 'Accueil', icon: 'home', href: HOME_HREF },
+  ...MODES.map((m) => ({ label: m.title, icon: m.icon, href: modeHref(m.id) })),
+]
 
 function maitrises(): number {
   const { stats } = load()
@@ -89,7 +103,7 @@ function Progression() {
 }
 
 interface ModeGridProps {
-  onPick: (id: ModeId) => void
+  onPick: (href: string) => void
 }
 
 function ModeGrid({ onPick }: ModeGridProps) {
@@ -99,7 +113,7 @@ function ModeGrid({ onPick }: ModeGridProps) {
         {MODES.map((m) => (
           <CascadeItem key={m.id} stretch>
             <Pressable
-              onClick={() => onPick(m.id)}
+              onClick={() => onPick(modeHref(m.id))}
               padding="lg"
               background={TILE_SURFACE}
               fullWidth
@@ -122,66 +136,76 @@ function ModeGrid({ onPick }: ModeGridProps) {
   )
 }
 
-export default function App() {
+interface HomeProps {
+  onPick: (href: string) => void
+}
+
+function Home({ onPick }: HomeProps) {
+  return (
+    <>
+      <Card variant="floating">
+        <Progression />
+      </Card>
+      <ModeGrid onPick={onPick} />
+    </>
+  )
+}
+
+interface ModeViewProps {
+  mode: ModeId
+}
+
+function ModeView({ mode }: ModeViewProps) {
+  const Mode = MODE_COMPONENTS[mode]
+
+  return <Mode />
+}
+
+interface GameNavigation {
+  view: View
+  activeHref: string
+  subtitle: string
+  navigate: (href: string) => void
+}
+
+function useGameNavigation(): GameNavigation {
   const [view, setView] = useState<View>('home')
   const { play } = useCanopSound()
 
-  if (view !== 'home') {
-    const Mode = MODE_COMPONENTS[view]
-    return (
-      <PageContent>
-        <Stack gap="md" alignItems="stretch">
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Pressable
-              onClick={() => {
-                play('click')
-                setView('home')
-              }}
-              padding="sm"
-              ariaLabel="Revenir au menu"
-            >
-              <Stack direction="row" gap="xs" alignItems="center">
-                <Icon name="arrowLeft" size="sm" />
-                <Text variant="label">Menu</Text>
-              </Stack>
-            </Pressable>
-            <SoundToggle />
-          </Stack>
-          <Mode key={view} />
-        </Stack>
-      </PageContent>
-    )
+  const activeMode = MODES.find((m) => m.id === view)
+
+  const navigate = (href: string) => {
+    const target = MODES.find((m) => modeHref(m.id) === href)
+    const next: View = target ? target.id : 'home'
+    if (next === view) return
+    play(next === 'home' ? 'click' : 'start')
+    setView(next)
   }
 
+  return {
+    view,
+    activeHref: activeMode ? modeHref(activeMode.id) : HOME_HREF,
+    subtitle: activeMode ? activeMode.desc : HOME_TAGLINE,
+    navigate,
+  }
+}
+
+export default function App() {
+  const { view, activeHref, subtitle, navigate } = useGameNavigation()
+
   return (
-    <PageContent>
-      <Stack gap="lg" alignItems="stretch">
-        <Stack direction="row" justifyContent="end">
-          <SoundToggle />
-        </Stack>
-
-        <Card variant="floating">
-          <Stack gap="md" alignItems="stretch">
-            <Stack gap="xs" alignItems="center">
-              <Heading level={1} align="center">
-                Départe<Text as="span" tone="primary" weight="extrabold">Mental</Text>
-              </Heading>
-              <Text variant="lead" tone="muted" align="center">
-                Le jeu pour enfin retenir les {TOTAL} départements
-              </Text>
-            </Stack>
-
-            <Progression />
-          </Stack>
-        </Card>
-
-        <ModeGrid
-          onPick={(id) => {
-            play('start')
-            setView(id)
-          }}
-        />
-      </Stack>
-    </PageContent>
+    <PageScaffold
+      navbarTitle={GAME_TITLE}
+      title={GAME_TITLE}
+      subtitle={subtitle}
+      headerActions={<SoundToggle />}
+      items={NAV_ITEMS}
+      activeHref={activeHref}
+      onNavigate={navigate}
+    >
+      <PageContent key={view}>
+        {view === 'home' ? <Home onPick={navigate} /> : <ModeView mode={view} />}
+      </PageContent>
+    </PageScaffold>
   )
 }
