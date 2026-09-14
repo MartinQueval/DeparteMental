@@ -56,9 +56,19 @@ function Tile<Id extends string>({ tile, roomy, onPick }: TileProps<Id>) {
         padding={compact ? 'none' : 'xs'}
         fill
       >
-        <Icon name={tile.icon} variant="solid" size="xl" color="primary" />
+        <Icon name={tile.icon} variant="solid" size={compact ? 'lg' : 'xl'} color="primary" />
         <Stack gap="xs" alignItems="stretch" fill>
-          <Heading level={3} size={compact ? 4 : 3} gutterBottom={false}>
+          {/*
+            Un titre est un mot, et un mot ne se coupe pas : sa largeur est le
+            plancher de la tuile, donc de la colonne. « Entrainement » en h4
+            mesure 232 px en Titan One ; avec l'icone, la gouttiere et le
+            rembourrage, la tuile ne pouvait pas descendre sous 352 px et
+            debordait de sa colonne des que l'ecran passait sous 375 px --
+            mesure a 320 et 360 px. En h5 avec l'icone d'un cran plus petite le
+            plancher tombe a 278 px, sous la colonne la plus etroite qu'un
+            telephone nous donne.
+          */}
+          <Heading level={3} size={compact ? 5 : 3} gutterBottom={false}>
             {tile.title}
           </Heading>
           <Text variant={compact ? 'body-sm' : 'body-md'} tone="muted">
