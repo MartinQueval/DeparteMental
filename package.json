@@ -15,7 +15,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^9.4.0",
     "@svg-maps/france.departments": "^2.0.0",
-    "canopui": "3.0.1",
+    "canopui": "3.0.2",
     "framer-motion": "^13.2.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
