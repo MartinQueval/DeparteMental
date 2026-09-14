@@ -1,4 +1,19 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import {
+  Button,
+  Card,
+  Choice,
+  Heading,
+  Icon,
+  Lives,
+  Stack,
+  Text,
+  useCanopSound,
+  useTranslation,
+  type CanopCardFlash,
+  type CanopChoiceState,
+  type CanopIconName,
+} from 'canopui'
 import {
   byCode,
   departements,
@@ -7,81 +22,51 @@ import {
   shuffle,
   type Departement,
 } from '../lib/departements.ts'
-import { recordAnswer, weakWeight } from '../lib/storage.ts'
-import { sfx } from '../lib/sound.ts'
-import {
-  IconCheck,
-  IconGraduationCap,
-  IconLandmark,
-  IconMapPin,
-  IconSparkle,
-  IconType,
-  IconX,
-  IconZap,
-  IconHeart,
-  type IconComponent,
-} from '../components/icons.tsx'
+import { ModeHeader } from '../lib/modeHeader.tsx'
+import { Cascade, CascadeItem, ViewIn } from '../lib/motion.tsx'
+import { usePlural } from '../lib/plural.ts'
+import { TileGrid, type TileModel } from '../lib/tiles.tsx'
+import { useDelayedStep } from '../lib/useDelayedStep.ts'
+import { pickWeighted, recordAnswer } from '../lib/storage.ts'
 
 const LIVES = 10
 
 type ThemeId = 'prefecture' | 'souspref' | 'code' | 'nom' | 'region'
 
-interface Theme {
+interface ThemeDefinition {
   id: ThemeId
-  icon: IconComponent
-  title: string
-  desc: string
+  icon: CanopIconName
 }
 
-const THEMES: Theme[] = [
-  {
-    id: 'prefecture',
-    icon: IconLandmark,
-    title: 'Préfectures',
-    desc: 'Quelle ville est la préfecture du département ?',
-  },
-  {
-    id: 'souspref',
-    icon: IconMapPin,
-    title: 'Sous-préfectures',
-    desc: 'Retrouve une sous-préfecture du département.',
-  },
-  {
-    id: 'code',
-    icon: IconType,
-    title: 'Codes',
-    desc: 'Associe chaque département à son numéro.',
-  },
-  {
-    id: 'nom',
-    icon: IconZap,
-    title: 'Noms',
-    desc: 'Quel département se cache derrière ce numéro ?',
-  },
-  {
-    id: 'region',
-    icon: IconMapPin,
-    title: 'Régions',
-    desc: 'Dans quelle région se trouve le département ?',
-  },
+const THEMES: readonly ThemeDefinition[] = [
+  { id: 'prefecture', icon: 'bank' },
+  { id: 'souspref', icon: 'location' },
+  { id: 'code', icon: 'tag' },
+  { id: 'nom', icon: 'pencil' },
+  { id: 'region', icon: 'mapLocation' },
 ]
+
+function useThemeTiles(): TileModel<ThemeId>[] {
+  const { t } = useTranslation()
+
+  return useMemo<TileModel<ThemeId>[]>(
+    () =>
+      THEMES.map(({ id, icon }) => ({
+        id,
+        icon,
+        title: t(`dm.training.theme.${id}.title`),
+        desc: t(`dm.training.theme.${id}.desc`),
+      })),
+    [t]
+  )
+}
 
 interface Question {
   dept: Departement
-  prompt: string
+  promptKey: string
+  promptValue: string
   answer: string
   options: string[]
-}
-
-/** Pondère le tirage vers les départements les moins maîtrisés. */
-function pickWeighted(pool: Departement[]): Departement {
-  const weights = pool.map((d) => weakWeight(d.code))
-  let r = Math.random() * weights.reduce((a, b) => a + b, 0)
-  for (let i = 0; i < pool.length; i++) {
-    r -= weights[i]
-    if (r <= 0) return pool[i]
-  }
-  return pool[pool.length - 1]
 }
 
 /** Construit 4 choix : la bonne réponse + 3 leurres uniques tirés du pool. */
@@ -108,7 +93,8 @@ function makeQuestion(theme: ThemeId): Question {
     const fallback = departements.flatMap((d) => [d.prefecture, ...d.sousPrefectures])
     return {
       dept,
-      prompt: `Quelle ville est une sous-préfecture de ${dept.nom} (${dept.code}) ?`,
+      promptKey: 'dm.training.prompt.souspref',
+      promptValue: `${dept.nom} (${dept.code})`,
       answer,
       options: buildOptions(
         answer,
@@ -124,7 +110,8 @@ function makeQuestion(theme: ThemeId): Question {
   if (theme === 'prefecture') {
     return {
       dept,
-      prompt: `Quelle est la préfecture de ${dept.nom} (${dept.code}) ?`,
+      promptKey: 'dm.training.prompt.prefecture',
+      promptValue: `${dept.nom} (${dept.code})`,
       answer: dept.prefecture,
       options: buildOptions(
         dept.prefecture,
@@ -137,7 +124,8 @@ function makeQuestion(theme: ThemeId): Question {
   if (theme === 'code') {
     return {
       dept,
-      prompt: `Quel est le numéro du département ${dept.nom} ?`,
+      promptKey: 'dm.training.prompt.code',
+      promptValue: dept.nom,
       answer: dept.code,
       options: buildOptions(
         dept.code,
@@ -150,7 +138,8 @@ function makeQuestion(theme: ThemeId): Question {
   if (theme === 'nom') {
     return {
       dept,
-      prompt: `Quel département porte le numéro ${dept.code} ?`,
+      promptKey: 'dm.training.prompt.nom',
+      promptValue: dept.code,
       answer: dept.nom,
       options: buildOptions(
         dept.nom,
@@ -160,10 +149,10 @@ function makeQuestion(theme: ThemeId): Question {
     }
   }
 
-  // region
   return {
     dept,
-    prompt: `Dans quelle région se trouve ${dept.nom} (${dept.code}) ?`,
+    promptKey: 'dm.training.prompt.region',
+    promptValue: `${dept.nom} (${dept.code})`,
     answer: dept.region,
     options: buildOptions(
       dept.region,
@@ -178,6 +167,169 @@ interface Result {
   ok: boolean
 }
 
+function choiceState(option: string, answer: string, picked: string | null): CanopChoiceState {
+  if (!picked) return 'neutral'
+  if (option === answer) return 'correct'
+  if (option === picked) return 'incorrect'
+  return 'neutral'
+}
+
+interface ThemePickerProps {
+  onPick: (id: ThemeId) => void
+}
+
+function ThemePicker({ onPick }: ThemePickerProps) {
+  const { t } = useTranslation()
+  const tiles = useThemeTiles()
+
+  return (
+    <Stack gap="lg" alignItems="stretch">
+      <ModeHeader
+        icon="university"
+        title={t('dm.training.title')}
+        description={t('dm.training.intro', { lives: LIVES })}
+      >
+        <Lives
+          value={LIVES}
+          max={LIVES}
+          ariaLabel={t('dm.training.startingLives', { lives: LIVES })}
+        />
+      </ModeHeader>
+
+      <TileGrid tiles={tiles} onPick={onPick} />
+    </Stack>
+  )
+}
+
+interface RecapProps {
+  results: Result[]
+  onReplay: () => void
+  onChangeTheme: () => void
+}
+
+function Recap({ results, onReplay, onChangeTheme }: RecapProps) {
+  const { t } = useTranslation()
+  const plural = usePlural()
+  const ok = results.filter((r) => r.ok).length
+
+  return (
+    <Stack gap="lg" alignItems="stretch">
+      <Card variant="floating">
+        <Stack gap="xs" alignItems="center">
+          <Icon name="star" variant="solid" size="xl" color="warning" />
+          <Heading level={2} align="center" gutterBottom={false}>
+            {t('dm.training.recap.title')}
+          </Heading>
+          <Text variant="metric" tone="primary">
+            {ok}
+          </Text>
+          <Text variant="body-sm" tone="muted" align="center">
+            {plural('dm.training.recap.summary', ok, { total: results.length })}
+          </Text>
+        </Stack>
+      </Card>
+
+      <Card title={t('dm.training.recap.list')}>
+        <Stack gap="xs" role="list">
+          {results.map((r, i) => {
+            const d = byCode[r.code]
+            return (
+              <Stack
+                key={`${r.code}-${i}`}
+                direction="row"
+                gap="sm"
+                alignItems="center"
+                role="listitem"
+              >
+                <Icon
+                  name={r.ok ? 'check' : 'close'}
+                  variant="solid"
+                  size="sm"
+                  color={r.ok ? 'success' : 'error'}
+                  title={r.ok ? t('dm.answer.correct') : t('dm.answer.incorrect')}
+                />
+                <Text variant="body-sm">
+                  {d.code} — {d.nom}
+                </Text>
+              </Stack>
+            )
+          })}
+        </Stack>
+      </Card>
+
+      <Stack direction="row" gap="sm" justifyContent="center" wrap>
+        <Button onClick={onReplay}>{t('dm.training.recap.replay')}</Button>
+        <Button variant="ghost" onClick={onChangeTheme}>
+          {t('dm.training.recap.changeTheme')}
+        </Button>
+      </Stack>
+    </Stack>
+  )
+}
+
+interface PlayProps {
+  index: number
+  livesLeft: number
+  question: Question
+  picked: string | null
+  onChoose: (option: string) => void
+}
+
+function Play({ index, livesLeft, question, picked, onChoose }: PlayProps) {
+  const { t } = useTranslation()
+  const plural = usePlural()
+  const flash: CanopCardFlash | undefined = picked
+    ? picked === question.answer
+      ? 'success'
+      : 'error'
+    : undefined
+
+  return (
+    <Stack gap="md" alignItems="stretch">
+      <Stack direction="row" gap="sm" alignItems="center" justifyContent="space-between">
+        <Text variant="body-lg" weight="semibold" tabularNums as="span">
+          {t('dm.training.question', { value: index + 1 })}
+        </Text>
+        <Lives
+          value={livesLeft}
+          max={LIVES}
+          ariaLabel={plural('dm.training.livesLeft', livesLeft)}
+        />
+      </Stack>
+
+      <Card flash={flash}>
+        <Stack gap="md" alignItems="stretch">
+          <Heading level={3} size={4} align="center" gutterBottom={false}>
+            {t(question.promptKey, { value: question.promptValue })}
+          </Heading>
+          <Cascade key={index}>
+            <Stack
+              gap="sm"
+              alignItems="stretch"
+              role="group"
+              ariaLabel={t('dm.training.answers')}
+            >
+              {question.options.map((opt) => (
+                <CascadeItem key={opt}>
+                  <Choice
+                    state={choiceState(opt, question.answer, picked)}
+                    disabled={picked !== null}
+                    onClick={() => onChoose(opt)}
+                  >
+                    <Text variant="body-md" as="span">
+                      {opt}
+                    </Text>
+                  </Choice>
+                </CascadeItem>
+              ))}
+            </Stack>
+          </Cascade>
+        </Stack>
+      </Card>
+    </Stack>
+  )
+}
+
 export default function Entrainement() {
   const [theme, setTheme] = useState<ThemeId | null>(null)
   const [index, setIndex] = useState(0)
@@ -185,11 +337,14 @@ export default function Entrainement() {
   const [picked, setPicked] = useState<string | null>(null)
   const [results, setResults] = useState<Result[]>([])
   const [finished, setFinished] = useState(false)
+  const { play } = useCanopSound()
+  const later = useDelayedStep()
 
   const lostLives = results.filter((r) => !r.ok).length
   const livesLeft = Math.max(0, LIVES - lostLives)
 
   function start(id: ThemeId) {
+    play('start')
     setTheme(id)
     setIndex(0)
     setResults([])
@@ -202,105 +357,60 @@ export default function Entrainement() {
     if (!question || picked || !theme) return
     const ok = option === question.answer
     recordAnswer(question.dept.code, ok)
-    if (ok) sfx.correct()
-    else sfx.wrong()
+    play(ok ? 'correct' : 'wrong')
     setPicked(option)
     setResults((r) => [...r, { code: question.dept.code, ok }])
 
-    // Passe à la carte suivante automatiquement, comme les autres modes.
     const gameOver = lostLives + (ok ? 0 : 1) >= LIVES
-    setTimeout(() => {
-      if (gameOver) {
-        sfx.finish()
-        setFinished(true)
-        return
-      }
-      setIndex((i) => i + 1)
-      setPicked(null)
-      setQuestion(makeQuestion(theme))
-    }, ok ? 600 : 1100)
+    later(
+      () => {
+        if (gameOver) {
+          play('finish')
+          setFinished(true)
+          return
+        }
+        setIndex((i) => i + 1)
+        setPicked(null)
+        setQuestion(makeQuestion(theme))
+      },
+      ok ? 600 : 1100
+    )
   }
 
-  // --- Choix du thème ---
   if (!theme) {
     return (
-      <div className="entrainement setup">
-        <h2><IconGraduationCap /> Entraînement ciblé</h2>
-        <p>Choisis un thème et révise-le à fond. Tu as {LIVES} vies : enchaîne les questions tant qu'il t'en reste.</p>
-        <div className="theme-grid">
-          {THEMES.map((t) => (
-            <button key={t.id} className="theme-card" onClick={() => { sfx.start(); start(t.id) }}>
-              <span className="theme-icon"><t.icon /></span>
-              <span className="theme-title">{t.title}</span>
-              <span className="theme-desc">{t.desc}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <ViewIn key="themes">
+        <ThemePicker onPick={start} />
+      </ViewIn>
     )
   }
 
-  // --- Récap ---
   if (finished) {
-    const ok = results.filter((r) => r.ok).length
     return (
-      <div className="entrainement done">
-        <h2>Plus de vies ! <IconSparkle /></h2>
-        <p className="final-score">{ok} bonnes réponses</p>
-        <p className="final-sub">{results.length} questions tentées</p>
-        <ul className="recap">
-          {results.map((r, i) => {
-            const d = byCode[r.code]
-            return (
-              <li key={`${r.code}-${i}`}>
-                {r.ok ? <IconCheck className="icon-ok" /> : <IconX className="icon-ko" />} {d.code} — {d.nom}
-              </li>
-            )
-          })}
-        </ul>
-        <div className="setup-buttons">
-          <button className="btn-primary" onClick={() => { sfx.start(); start(theme) }}>Rejouer ce thème</button>
-          <button className="btn-back" onClick={() => { sfx.click(); setTheme(null) }}>Changer de thème</button>
-        </div>
-      </div>
+      <ViewIn key="recap">
+        <Recap
+          results={results}
+          onReplay={() => start(theme)}
+          onChangeTheme={() => {
+            play('click')
+            setTheme(null)
+          }}
+        />
+      </ViewIn>
     )
   }
 
-  // --- Jeu ---
   if (!question) return null
 
   return (
-    <div className="entrainement play">
-      <div className="play-status">
-        <span className="card-count">Question {index + 1}</span>
-        <span className="lives" aria-label={`${livesLeft} vies restantes`}>
-          {Array.from({ length: LIVES }, (_, i) => (
-            <IconHeart key={i} className={i < livesLeft ? 'life' : 'life lost'} />
-          ))}
-        </span>
-      </div>
-      <div className="question-card">
-        <p className="prompt">{question.prompt}</p>
-        <div className="choices">
-          {question.options.map((opt) => {
-            let cls = 'btn-choice'
-            if (picked) {
-              if (opt === question.answer) cls += ' choice-ok'
-              else if (opt === picked) cls += ' choice-ko'
-            }
-            return (
-              <button
-                key={opt}
-                className={cls}
-                disabled={!!picked}
-                onClick={() => choose(opt)}
-              >
-                {opt}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </div>
+    <ViewIn key="play">
+      <Play
+        index={index}
+        livesLeft={livesLeft}
+        question={question}
+        picked={picked}
+        onChoose={choose}
+      />
+    </ViewIn>
   )
 }

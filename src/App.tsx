@@ -1,57 +1,39 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import {
+  Card,
+  PageContent,
+  PageScaffold,
+  ProgressBar,
+  SoundToggle,
+  Stack,
+  useBreakpointDown,
+  useCanopSound,
+  useTranslation,
+  type CanopIconName,
+  type CanopNavbarItem,
+  type CanopPageContentMaxWidth,
+} from 'canopui'
 import Quiz from './modes/Quiz.tsx'
 import Entrainement from './modes/Entrainement.tsx'
 import Daily from './modes/Daily.tsx'
 import Carte from './modes/Carte.tsx'
-import {
-  IconZap,
-  IconGraduationCap,
-  IconCalendar,
-  IconMap,
-  IconFlag,
-  IconVolume,
-  IconVolumeOff,
-  type IconComponent,
-} from './components/icons.tsx'
 import { departements } from './lib/departements.ts'
+import { TileGrid, type TileModel } from './lib/tiles.tsx'
 import { load } from './lib/storage.ts'
-import { isMuted, sfx, toggleMuted } from './lib/sound.ts'
 
 type ModeId = 'quiz' | 'entrainement' | 'daily' | 'carte'
 type View = 'home' | ModeId
 
-interface ModeDef {
+interface ModeDefinition {
   id: ModeId
-  icon: IconComponent
-  title: string
-  desc: string
+  icon: CanopIconName
 }
 
-const MODES: ModeDef[] = [
-  {
-    id: 'quiz',
-    icon: IconZap,
-    title: 'Quiz éclair',
-    desc: '60 secondes, un max de bonnes réponses. Enchaîne pour le multiplicateur !',
-  },
-  {
-    id: 'entrainement',
-    icon: IconGraduationCap,
-    title: 'Entraînement',
-    desc: 'Choisis ton thème et révise-le à fond.',
-  },
-  {
-    id: 'daily',
-    icon: IconCalendar,
-    title: 'Défi du jour',
-    desc: 'Un département mystère par jour, des indices à chaque essai.',
-  },
-  {
-    id: 'carte',
-    icon: IconMap,
-    title: 'Carte',
-    desc: 'Clique le bon département sur la carte de France.',
-  },
+const MODES: readonly ModeDefinition[] = [
+  { id: 'quiz', icon: 'lightning' },
+  { id: 'entrainement', icon: 'book' },
+  { id: 'daily', icon: 'calendar' },
+  { id: 'carte', icon: 'mapLocation' },
 ]
 
 const MODE_COMPONENTS: Record<ModeId, () => React.JSX.Element | null> = {
@@ -61,76 +43,152 @@ const MODE_COMPONENTS: Record<ModeId, () => React.JSX.Element | null> = {
   carte: Carte,
 }
 
-function Progress() {
+const TOTAL = departements.length
+const GAME_TITLE = 'DéparteMental'
+const HOME_HREF = '/'
+const CONTENT_MAX_WIDTH: CanopPageContentMaxWidth = 'md'
+const HOME_MAX_WIDTH: CanopPageContentMaxWidth = 'lg'
+const PROGRESS_SCALE = 100
+const DOCKED_SOUND_SIZE = '2.75rem'
+const HEADER_SOUND_SIZE = '3.5rem'
+
+function modeHref(id: ModeId): string {
+  return `/${id}`
+}
+
+function HeaderSound() {
+  const docked = useBreakpointDown('sm')
+
+  return (
+    <SoundToggle
+      size={docked ? DOCKED_SOUND_SIZE : HEADER_SOUND_SIZE}
+      iconSize={docked ? 'md' : 'lg'}
+    />
+  )
+}
+
+function useModeTiles(): TileModel<ModeId>[] {
+  const { t } = useTranslation()
+
+  return useMemo<TileModel<ModeId>[]>(
+    () =>
+      MODES.map(({ id, icon }) => ({
+        id,
+        icon,
+        title: t(`dm.mode.${id}.title`),
+        desc: t(`dm.mode.${id}.desc`),
+      })),
+    [t]
+  )
+}
+
+function useNavItems(tiles: TileModel<ModeId>[]): CanopNavbarItem[] {
+  const { t } = useTranslation()
+
+  return useMemo<CanopNavbarItem[]>(
+    () => [
+      { label: t('dm.nav.home'), icon: 'home', href: HOME_HREF },
+      ...tiles.map((tile) => ({ label: tile.title, icon: tile.icon, href: modeHref(tile.id) })),
+    ],
+    [t, tiles]
+  )
+}
+
+function maitrises(): number {
   const { stats } = load()
-  const mastered = departements.filter((d) => {
+  return departements.filter((d) => {
     const s = stats[d.code]
     return s && s.seen >= 3 && s.ok / s.seen >= 0.8
   }).length
+}
+
+function Progression() {
+  const { t } = useTranslation()
+  const acquis = maitrises()
+
   return (
-    <div className="progress">
-      <div className="progress-bar">
-        <div className="progress-fill" style={{ width: `${(mastered / 101) * 100}%` }} />
-      </div>
-      <span className="progress-label">{mastered} / 101 départements maîtrisés</span>
-    </div>
+    <ProgressBar
+      value={(acquis / TOTAL) * PROGRESS_SCALE}
+      label={t('dm.home.progress', { value: acquis, max: TOTAL })}
+    />
   )
 }
 
-function SoundToggle() {
-  const [muted, setMuted] = useState(isMuted())
+interface HomeProps {
+  tiles: TileModel<ModeId>[]
+  onPick: (href: string) => void
+}
+
+function Home({ tiles, onPick }: HomeProps) {
   return (
-    <button
-      className="sound-toggle"
-      aria-label={muted ? 'Activer le son' : 'Couper le son'}
-      onClick={() => setMuted(toggleMuted())}
-    >
-      {muted ? <IconVolumeOff /> : <IconVolume />}
-    </button>
+    <Stack gap="lg" alignItems="stretch">
+      <Card variant="floating">
+        <Progression />
+      </Card>
+      <TileGrid tiles={tiles} onPick={(id) => onPick(modeHref(id))} />
+    </Stack>
   )
+}
+
+interface ModeViewProps {
+  mode: ModeId
+}
+
+function ModeView({ mode }: ModeViewProps) {
+  const Mode = MODE_COMPONENTS[mode]
+
+  return <Mode />
+}
+
+interface GameNavigation {
+  view: View
+  activeHref: string
+  subtitle: string
+  navigate: (href: string) => void
+}
+
+function useGameNavigation(tiles: TileModel<ModeId>[]): GameNavigation {
+  const [view, setView] = useState<View>('home')
+  const { play } = useCanopSound()
+  const { t } = useTranslation()
+
+  const activeMode = tiles.find((tile) => tile.id === view)
+
+  const navigate = (href: string) => {
+    const target = tiles.find((tile) => modeHref(tile.id) === href)
+    const next: View = target ? target.id : 'home'
+    if (next === view) return
+    play(next === 'home' ? 'click' : 'start')
+    setView(next)
+  }
+
+  return {
+    view,
+    activeHref: activeMode ? modeHref(activeMode.id) : HOME_HREF,
+    subtitle: activeMode ? activeMode.desc : t('dm.home.tagline', { total: TOTAL }),
+    navigate,
+  }
 }
 
 export default function App() {
-  const [view, setView] = useState<View>('home')
-
-  if (view !== 'home') {
-    const Mode = MODE_COMPONENTS[view]
-    return (
-      <div className="app">
-        <SoundToggle />
-        <div className="view" key={view}>
-          <header className="mode-header">
-            <button className="btn-back" onClick={() => { sfx.click(); setView('home') }}>← Menu</button>
-          </header>
-          <Mode />
-        </div>
-      </div>
-    )
-  }
+  const tiles = useModeTiles()
+  const items = useNavItems(tiles)
+  const { view, activeHref, subtitle, navigate } = useGameNavigation(tiles)
 
   return (
-    <div className="app">
-      <SoundToggle />
-      <div className="view home" key="home">
-        <header className="home-header">
-          <h1>
-            Départe<span className="accent">Mental</span>
-          </h1>
-          <p className="tagline">
-            Le jeu pour enfin retenir les 101 départements <IconFlag className="accent" />
-          </p>
-        </header>
-        <Progress />
-        <main className="mode-grid">
-          {MODES.map((m) => (
-            <button key={m.id} className="mode-card" onClick={() => { sfx.start(); setView(m.id) }}>
-              <span className="mode-icon"><m.icon /></span>
-              <span className="mode-title">{m.title}</span>
-              <span className="mode-desc">{m.desc}</span>
-            </button>
-          ))}
-        </main>
-      </div>
-    </div>
+    <PageScaffold
+      navbarTitle={GAME_TITLE}
+      title={GAME_TITLE}
+      subtitle={subtitle}
+      headerActions={<HeaderSound />}
+      actionsPlacement="floating"
+      items={items}
+      activeHref={activeHref}
+      onNavigate={navigate}
+    >
+      <PageContent key={view} maxWidth={view === 'home' ? HOME_MAX_WIDTH : CONTENT_MAX_WIDTH}>
+        {view === 'home' ? <Home tiles={tiles} onPick={navigate} /> : <ModeView mode={view} />}
+      </PageContent>
+    </PageScaffold>
   )
 }

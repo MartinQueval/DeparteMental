@@ -1,349 +1,457 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import franceMap from '@svg-maps/france.departments'
-import { byCode, shuffle } from '../lib/departements.ts'
-import { recordAnswer, load, type DeptStats } from '../lib/storage.ts'
-import { sfx } from '../lib/sound.ts'
-import { IconCheck, IconDot, IconMap, IconTarget } from '../components/icons.tsx'
+import {
+  Button,
+  Card,
+  Heading,
+  Icon,
+  Legend,
+  ProgressBar,
+  Stack,
+  SvgMap,
+  Text,
+  useBreakpointDown,
+  useCanopSound,
+  useSvgMapViewport,
+  useTransientState,
+  useTranslation,
+  type CanopCardFlash,
+  type CanopSvgMapRegion,
+  type UseSvgMapViewportResult,
+} from 'canopui'
+import { byCode, shuffle, type Departement } from '../lib/departements.ts'
+import { ViewIn } from '../lib/motion.tsx'
+import { useDelayedStep } from '../lib/useDelayedStep.ts'
+import { load, recordAnswer, type DeptStats } from '../lib/storage.ts'
 
 const ROUNDS = 10
-const mapCodes = franceMap.locations.map((l) => l.id)
-const IDF_CODES = ['75', '92', '93', '94', '91', '95', '77', '78']
+const CORRECT_DELAY = 400
+const WRONG_DELAY = 1400
+const MAP_MAX_WIDTH = '34rem'
+const MAP_MAX_HEIGHT = '26rem'
+const MAP_WEIGHT = 2
+const PANEL_WEIGHT = 1
+const PROGRESS_SCALE = 100
+
+const NEUTRAL = 'var(--canop-palette-background-paper)'
+const MASTERED = 'var(--canop-palette-success-main)'
+const AVERAGE = 'var(--canop-palette-warning-main)'
+const WEAK = 'var(--canop-palette-error-main)'
+const REVEALED = 'var(--canop-palette-info-main)'
+const OUTLINE = 'var(--canop-palette-text-disabled)'
+
+const PLAIN_REGIONS: CanopSvgMapRegion[] = franceMap.locations.map(({ id, path }) => ({ id, path }))
+
+const NAMED_REGIONS: CanopSvgMapRegion[] = franceMap.locations.map(({ id, path }) => ({
+  id,
+  path,
+  name: `${byCode[id].nom} (${id})`,
+}))
+
+const MAP_CODES = PLAIN_REGIONS.map((region) => region.id)
 
 type CarteMode = 'jeu' | 'heatmap'
 type CellResult = 'ok' | 'ko' | 'target'
 
-interface VB {
-  x: number
-  y: number
-  w: number
-  h: number
+const RESULT_FILL: Record<CellResult, string> = {
+  ok: MASTERED,
+  ko: WEAK,
+  target: REVEALED,
 }
 
-function parseVB(s: string): VB {
-  const [x, y, w, h] = s.split(/\s+/).map(Number)
-  return { x, y, w, h }
+function heatFill(code: string, stats: Record<string, DeptStats>): string {
+  const stat = stats[code]
+  if (!stat) return NEUTRAL
+  const rate = stat.ok / stat.seen
+  if (rate >= 0.8) return MASTERED
+  if (rate >= 0.5) return AVERAGE
+  return WEAK
 }
 
-const BASE = parseVB(franceMap.viewBox)
-const ASPECT = BASE.w / BASE.h
-const MIN_W = BASE.w / 9 // zoom max ≈ ×9
-const TAP_TOLERANCE = 6 // px : au-delà, c'est un déplacement, pas un clic
-
-function heatColor(code: string, stats: Record<string, DeptStats>): string {
-  const s = stats[code]
-  if (!s) return '#ffffff'
-  const rate = s.ok / s.seen
-  if (rate >= 0.8) return '#22c55e'
-  if (rate >= 0.5) return '#eab308'
-  return '#ef4444'
+interface CarteMapProps {
+  viewport: UseSvgMapViewportResult
+  regions: readonly CanopSvgMapRegion[]
+  fill: (id: string) => string
+  selectable?: boolean
+  onSelect?: (id: string) => void
 }
 
-export default function Carte() {
-  const [mode, setMode] = useState<CarteMode | null>(null)
-  const [queue, setQueue] = useState<string[]>([])
+function CarteMap({ viewport, regions, fill, selectable = false, onSelect }: CarteMapProps) {
+  const { t } = useTranslation()
+
+  return (
+    <Card radius="xl" density="dense" fill>
+      <Stack justifyContent="center" fill>
+        <SvgMap
+          viewBox={franceMap.viewBox}
+          viewport={viewport}
+          regions={regions}
+          fill={fill}
+          stroke={OUTLINE}
+          maxWidth={MAP_MAX_WIDTH}
+          maxHeight={MAP_MAX_HEIGHT}
+          selectable={selectable}
+          onSelect={onSelect}
+          ariaLabel={t('dm.carte.mapLabel')}
+        />
+      </Stack>
+    </Card>
+  )
+}
+
+function CarteAide() {
+  const { t } = useTranslation()
+
+  return (
+    <Stack direction="row" gap="xs" alignItems="center" justifyContent="center" wrap>
+      <Icon name="info" size="sm" color="neutral" />
+      <Text variant="caption" tone="muted" align="center" as="span">
+        {t('dm.carte.hint')}
+      </Text>
+    </Stack>
+  )
+}
+
+interface CarteBoardProps {
+  panel: ReactNode
+  map: ReactNode
+}
+
+function CarteColumns({ panel, map }: CarteBoardProps) {
+  return (
+    <Stack direction="row" gap="md" alignItems="stretch">
+      <Stack weight={PANEL_WEIGHT}>{panel}</Stack>
+      <Stack weight={MAP_WEIGHT}>{map}</Stack>
+    </Stack>
+  )
+}
+
+function CarteRows({ panel, map }: CarteBoardProps) {
+  return (
+    <Stack gap="md" alignItems="stretch">
+      {panel}
+      {map}
+    </Stack>
+  )
+}
+
+function CarteBoard({ panel, map }: CarteBoardProps) {
+  const stacked = useBreakpointDown('sm')
+
+  return (
+    <Stack gap="sm" alignItems="stretch">
+      {stacked ? <CarteRows panel={panel} map={map} /> : <CarteColumns panel={panel} map={map} />}
+      <CarteAide />
+    </Stack>
+  )
+}
+
+interface CarteSetupProps {
+  onChoose: (mode: CarteMode) => void
+}
+
+function CarteSetup({ onChoose }: CarteSetupProps) {
+  const { play } = useCanopSound()
+  const { t } = useTranslation()
+  const compact = useBreakpointDown('sm')
+
+  return (
+    <Card radius="xl">
+      <Stack gap="lg" alignItems="stretch">
+        <Stack gap="xs" alignItems="center">
+          <Icon name="mapLocation" size="xl" color="primary" variant="solid" />
+          <Heading level={2} size={compact ? 4 : 3} align="center" gutterBottom={false}>
+            {t('dm.carte.title')}
+          </Heading>
+          <Text variant="lead" tone="muted" align="center">
+            {t('dm.carte.intro')}
+          </Text>
+        </Stack>
+        <Stack direction="row" gap="sm" justifyContent="center" alignItems="center" wrap>
+          <Button
+            size="large"
+            startIcon={<Icon name="locationCheck" size="sm" />}
+            onClick={() => {
+              play('start')
+              onChoose('jeu')
+            }}
+          >
+            {t('dm.carte.play', { count: ROUNDS })}
+          </Button>
+          <Button
+            variant="secondary"
+            size="large"
+            startIcon={<Icon name="mapLocation" size="sm" />}
+            onClick={() => {
+              play('click')
+              onChoose('heatmap')
+            }}
+          >
+            {t('dm.carte.heatmap')}
+          </Button>
+        </Stack>
+      </Stack>
+    </Card>
+  )
+}
+
+interface CarteConsigneProps {
+  round: number
+  score: number
+  target: Departement
+  flash?: CanopCardFlash
+}
+
+function CarteConsigne({ round, score, target, flash }: CarteConsigneProps) {
+  const { t } = useTranslation()
+  const compact = useBreakpointDown('sm')
+
+  return (
+    <Card radius="xl" flash={flash} fill>
+      <Stack gap="lg" alignItems="stretch" justifyContent="center" fill>
+        <Stack gap="xs" alignItems="stretch">
+          <Stack direction="row" gap="md" justifyContent="space-between" alignItems="center">
+            <Text variant="label" tone="muted" tabularNums as="span">
+              {round + 1}/{ROUNDS}
+            </Text>
+            <Stack direction="row" gap="xs" alignItems="center">
+              <Icon name="check" size="sm" color="success" variant="solid" />
+              <Text variant="label" weight="bold" tabularNums as="span">
+                {score}
+              </Text>
+            </Stack>
+          </Stack>
+          <ProgressBar
+            value={(round / ROUNDS) * PROGRESS_SCALE}
+            ariaLabel={t('dm.carte.progress', { value: round + 1, max: ROUNDS })}
+          />
+        </Stack>
+
+        <Stack gap="xs" alignItems="center">
+          <Text variant="overline" tone="muted" as="span">
+            {t('dm.carte.clickOn')}
+          </Text>
+          <Heading level={3} size={compact ? 5 : 4} align="center" gutterBottom={false}>
+            {target.nom} ({target.code})
+          </Heading>
+        </Stack>
+      </Stack>
+    </Card>
+  )
+}
+
+interface CarteResultatProps {
+  score: number
+  onRestart: () => void
+}
+
+function CarteResultat({ score, onRestart }: CarteResultatProps) {
+  const { t } = useTranslation()
+
+  return (
+    <Card variant="floating" radius="xl" fill>
+      <Stack gap="sm" alignItems="center" justifyContent="center" fill>
+        <Icon name="locationCheck" size="xl" color="accent" variant="solid" />
+        <Heading level={3} size={2} align="center" gutterBottom={false}>
+          {score} / {ROUNDS}
+        </Heading>
+        <Text variant="body-sm" tone="muted" align="center">
+          {t('dm.carte.located')}
+        </Text>
+        <Button onClick={onRestart} startIcon={<Icon name="refresh" size="sm" />}>
+          {t('dm.carte.replay')}
+        </Button>
+      </Stack>
+    </Card>
+  )
+}
+
+interface UseCarteJeuResult {
+  viewport: UseSvgMapViewportResult
+  round: number
+  score: number
+  finished: boolean
+  target: Departement | null
+  fill: (id: string) => string
+  flash: CanopCardFlash | undefined
+  answer: (id: string) => void
+  restart: () => void
+}
+
+function useCarteJeu(): UseCarteJeuResult {
+  const { play } = useCanopSound()
+  const viewport = useSvgMapViewport({ viewBox: franceMap.viewBox })
+  const {
+    value: flash,
+    show: showFlash,
+    clear: clearFlash,
+  } = useTransientState<CanopCardFlash | undefined>(undefined)
+  const [queue, setQueue] = useState(() => shuffle(MAP_CODES).slice(0, ROUNDS))
   const [round, setRound] = useState(0)
   const [score, setScore] = useState(0)
   const [result, setResult] = useState<Record<string, CellResult>>({})
   const [locked, setLocked] = useState(false)
-  const [vb, setVb] = useState<VB>(BASE)
-  const stats = load().stats
-
-  const svgRef = useRef<SVGSVGElement>(null)
-  const pathRefs = useRef<Record<string, SVGPathElement | null>>({})
-  const ptrs = useRef<Map<number, { x: number; y: number }>>(new Map())
-  const panRef = useRef<{ cx: number; cy: number; vb: VB } | null>(null)
-  const pinchRef = useRef<{ dist: number; sx: number; sy: number; vb: VB } | null>(null)
-  const movedRef = useRef(false)
-
-  function start() {
-    sfx.start()
-    setQueue(shuffle(mapCodes).slice(0, ROUNDS))
-    setRound(0)
-    setScore(0)
-    setResult({})
-    setLocked(false)
-    setVb(BASE)
-    setMode('jeu')
-  }
+  const later = useDelayedStep()
 
   const targetCode = queue[round]
-  const target = targetCode ? byCode[targetCode] : null
 
-  function clickDept(id: string) {
-    if (movedRef.current) return // c'était un glissement, pas un clic
-    if (mode !== 'jeu' || locked || round >= ROUNDS) return
-    const ok = id === targetCode
-    const last = round + 1 >= ROUNDS
-    recordAnswer(targetCode, ok)
-    if (ok) {
-      sfx.correct()
-      setScore((s) => s + 1)
-      setResult((r) => ({ ...r, [id]: 'ok' }))
-      setTimeout(() => {
-        setRound((r) => r + 1)
-        if (last) sfx.finish()
-      }, 400)
-    } else {
-      sfx.wrong()
+  const answer = useCallback(
+    (id: string) => {
+      if (locked || round >= ROUNDS) return
+      const correct = id === targetCode
+      const last = round + 1 >= ROUNDS
+      recordAnswer(targetCode, correct)
+
+      if (correct) {
+        play('correct')
+        showFlash('success', CORRECT_DELAY)
+        setScore((current) => current + 1)
+        setResult((current) => ({ ...current, [id]: 'ok' }))
+        later(() => {
+          setRound((current) => current + 1)
+          if (last) play('finish')
+        }, CORRECT_DELAY)
+        return
+      }
+
+      play('wrong')
+      showFlash('error', WRONG_DELAY)
       setLocked(true)
-      setResult((r) => ({ ...r, [id]: 'ko', [targetCode]: 'target' }))
-      setTimeout(() => {
-        setResult((r) => {
-          const rest = { ...r }
+      setResult((current) => ({ ...current, [id]: 'ko', [targetCode]: 'target' }))
+      later(() => {
+        setResult((current) => {
+          const rest = { ...current }
           delete rest[id]
           delete rest[targetCode]
           return rest
         })
         setLocked(false)
-        setRound((r) => r + 1)
-        if (last) sfx.finish()
-      }, 1400)
-    }
+        setRound((current) => current + 1)
+        if (last) play('finish')
+      }, WRONG_DELAY)
+    },
+    [later, locked, play, round, showFlash, targetCode]
+  )
+
+  const fill = useCallback(
+    (id: string) => {
+      const cell = result[id]
+      return cell ? RESULT_FILL[cell] : NEUTRAL
+    },
+    [result]
+  )
+
+  const restart = useCallback(() => {
+    play('start')
+    clearFlash()
+    viewport.reset()
+    setQueue(shuffle(MAP_CODES).slice(0, ROUNDS))
+    setRound(0)
+    setScore(0)
+    setResult({})
+    setLocked(false)
+  }, [clearFlash, play, viewport])
+
+  return {
+    viewport,
+    round,
+    score,
+    finished: round >= ROUNDS,
+    target: targetCode ? byCode[targetCode] : null,
+    fill,
+    flash,
+    answer,
+    restart,
   }
+}
 
-  // ---------- Zoom / déplacement ----------
-  function clamp(v: VB): VB {
-    const w = Math.min(Math.max(v.w, MIN_W), BASE.w)
-    const h = w / ASPECT
-    const x = Math.min(Math.max(v.x, BASE.x), BASE.x + BASE.w - w)
-    const y = Math.min(Math.max(v.y, BASE.y), BASE.y + BASE.h - h)
-    return { x, y, w, h }
-  }
+function CarteJeu() {
+  const { viewport, round, score, finished, target, fill, flash, answer, restart } = useCarteJeu()
 
-  function zoomAround(factor: number, clientX: number, clientY: number) {
-    const svg = svgRef.current
-    if (!svg) return
-    setVb((prev) => {
-      const rect = svg.getBoundingClientRect()
-      const fx = (clientX - rect.left) / rect.width
-      const fy = (clientY - rect.top) / rect.height
-      const sx = prev.x + fx * prev.w
-      const sy = prev.y + fy * prev.h
-      const w = prev.w * factor
-      const h = w / ASPECT
-      return clamp({ x: sx - fx * w, y: sy - fy * h, w, h })
-    })
-  }
-
-  function zoomButton(factor: number) {
-    const rect = svgRef.current?.getBoundingClientRect()
-    if (!rect) return
-    zoomAround(factor, rect.left + rect.width / 2, rect.top + rect.height / 2)
-  }
-
-  function zoomIDF() {
-    let minX = Infinity
-    let minY = Infinity
-    let maxX = -Infinity
-    let maxY = -Infinity
-    for (const code of IDF_CODES) {
-      const el = pathRefs.current[code]
-      if (!el) continue
-      const b = el.getBBox()
-      minX = Math.min(minX, b.x)
-      minY = Math.min(minY, b.y)
-      maxX = Math.max(maxX, b.x + b.width)
-      maxY = Math.max(maxY, b.y + b.height)
-    }
-    if (minX === Infinity) return
-    const cx = (minX + maxX) / 2
-    const cy = (minY + maxY) / 2
-    const bw = maxX - minX
-    const bh = maxY - minY
-    let w = Math.max(bw, bh * ASPECT) * 1.25 // marge autour
-    w = Math.max(w, MIN_W)
-    const h = w / ASPECT
-    setVb(clamp({ x: cx - w / 2, y: cy - h / 2, w, h }))
-  }
-
-  function startPan(cx: number, cy: number) {
-    panRef.current = { cx, cy, vb }
-  }
-
-  function startPinch() {
-    const pts = [...ptrs.current.values()]
-    if (pts.length < 2) return
-    const [a, b] = pts
-    const svg = svgRef.current
-    if (!svg) return
-    const rect = svg.getBoundingClientRect()
-    const midX = (a.x + b.x) / 2
-    const midY = (a.y + b.y) / 2
-    const fx = (midX - rect.left) / rect.width
-    const fy = (midY - rect.top) / rect.height
-    pinchRef.current = {
-      dist: Math.hypot(a.x - b.x, a.y - b.y),
-      sx: vb.x + fx * vb.w,
-      sy: vb.y + fy * vb.h,
-      vb,
-    }
-    panRef.current = null
-  }
-
-  function onPointerDown(e: React.PointerEvent) {
-    ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
-    movedRef.current = false
-    if (ptrs.current.size >= 2) startPinch()
-    else startPan(e.clientX, e.clientY)
-  }
-
-  useEffect(() => {
-    const svg = svgRef.current
-    if (!svg) return
-
-    function onMove(e: PointerEvent) {
-      if (!ptrs.current.has(e.pointerId)) return
-      ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
-      const rect = svg!.getBoundingClientRect()
-      const pts = [...ptrs.current.values()]
-
-      if (pts.length >= 2 && pinchRef.current) {
-        const [a, b] = pts
-        const dist = Math.hypot(a.x - b.x, a.y - b.y)
-        const midX = (a.x + b.x) / 2
-        const midY = (a.y + b.y) / 2
-        const fx = (midX - rect.left) / rect.width
-        const fy = (midY - rect.top) / rect.height
-        const start = pinchRef.current
-        const w = (start.vb.w * start.dist) / Math.max(dist, 1)
-        const h = w / ASPECT
-        movedRef.current = true
-        setVb(clamp({ x: start.sx - fx * w, y: start.sy - fy * h, w, h }))
-      } else if (pts.length === 1 && panRef.current) {
-        const start = panRef.current
-        const dx = e.clientX - start.cx
-        const dy = e.clientY - start.cy
-        if (Math.hypot(dx, dy) > TAP_TOLERANCE) movedRef.current = true
-        const sdx = (dx / rect.width) * start.vb.w
-        const sdy = (dy / rect.height) * start.vb.h
-        setVb(clamp({ ...start.vb, x: start.vb.x - sdx, y: start.vb.y - sdy }))
+  return (
+    <CarteBoard
+      panel={
+        finished || !target ? (
+          <CarteResultat score={score} onRestart={restart} />
+        ) : (
+          <CarteConsigne round={round} score={score} target={target} flash={flash} />
+        )
       }
-    }
-
-    function onUp(e: PointerEvent) {
-      ptrs.current.delete(e.pointerId)
-      if (ptrs.current.size === 0) {
-        panRef.current = null
-        pinchRef.current = null
-      } else if (ptrs.current.size === 1) {
-        pinchRef.current = null
-        const [p] = [...ptrs.current.values()]
-        startPan(p.x, p.y)
+      map={
+        <CarteMap
+          viewport={viewport}
+          regions={PLAIN_REGIONS}
+          fill={fill}
+          selectable={!finished}
+          onSelect={answer}
+        />
       }
-    }
+    />
+  )
+}
 
-    function onWheel(e: WheelEvent) {
-      e.preventDefault()
-      zoomAround(e.deltaY > 0 ? 1.15 : 1 / 1.15, e.clientX, e.clientY)
-    }
+function CarteHeatmapPanel() {
+  const { t } = useTranslation()
 
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onUp)
-    svg.addEventListener('wheel', onWheel, { passive: false })
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onUp)
-      svg.removeEventListener('wheel', onWheel)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  return (
+    <Card radius="xl" fill>
+      <Stack gap="md" alignItems="stretch" justifyContent="center" fill>
+        <Stack direction="row" gap="sm" alignItems="center">
+          <Icon name="mapLocation" size="lg" color="primary" variant="solid" />
+          <Heading level={3} size={4} gutterBottom={false}>
+            {t('dm.carte.heatmap')}
+          </Heading>
+        </Stack>
+        <Legend
+          items={[
+            { tone: 'success', label: t('dm.carte.legend.mastered') },
+            { tone: 'warning', label: t('dm.carte.legend.average') },
+            { tone: 'error', label: t('dm.carte.legend.weak') },
+          ]}
+        />
+        <Text variant="caption" tone="muted">
+          {t('dm.carte.legend.hint')}
+        </Text>
+      </Stack>
+    </Card>
+  )
+}
+
+function CarteHeatmap() {
+  const viewport = useSvgMapViewport({ viewBox: franceMap.viewBox })
+  const [stats] = useState(() => load().stats)
+  const fill = useCallback((id: string) => heatFill(id, stats), [stats])
+
+  return (
+    <CarteBoard
+      panel={<CarteHeatmapPanel />}
+      map={<CarteMap viewport={viewport} regions={NAMED_REGIONS} fill={fill} />}
+    />
+  )
+}
+
+export default function Carte() {
+  const [mode, setMode] = useState<CarteMode | null>(null)
 
   if (!mode) {
     return (
-      <div className="carte setup">
-        <h2><IconMap /> Carte de France</h2>
-        <div className="setup-buttons">
-          <button className="btn-primary" onClick={start}>
-            Jouer ({ROUNDS} départements à localiser)
-          </button>
-          <button className="btn-primary" onClick={() => { sfx.click(); setMode('heatmap') }}>
-            Ma heatmap de progression
-          </button>
-        </div>
-      </div>
+      <ViewIn key="setup">
+        <CarteSetup onChoose={setMode} />
+      </ViewIn>
     )
   }
 
-  const finished = mode === 'jeu' && round >= ROUNDS
-  const zoomed = vb.w < BASE.w - 0.5
+  if (mode === 'jeu') {
+    return (
+      <ViewIn key="jeu">
+        <CarteJeu />
+      </ViewIn>
+    )
+  }
 
   return (
-    <div className="carte">
-      {mode === 'jeu' && !finished && target && (
-        <div className="hud">
-          <span><IconTarget /> {round + 1}/{ROUNDS}</span>
-          <span className="carte-target">
-            Clique sur : <strong>{target.nom} ({target.code})</strong>
-          </span>
-          <span className="score">{score} <IconCheck className="icon-ok" /></span>
-        </div>
-      )}
-      {finished && (
-        <div className="carte-done">
-          <p className="final-score">{score} / {ROUNDS} <IconTarget className="accent" /></p>
-          <button className="btn-primary" onClick={start}>Rejouer</button>
-        </div>
-      )}
-      {mode === 'heatmap' && (
-        <p className="hint">
-          <IconDot color="#22c55e" /> maîtrisé · <IconDot color="#eab308" /> moyen ·{' '}
-          <IconDot color="#ef4444" /> à bosser · <IconDot color="#ffffff" /> jamais croisé
-        </p>
-      )}
-
-      <div className="map-wrap">
-        <svg
-          ref={svgRef}
-          viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
-          className="france-map"
-          role="img"
-          aria-label="Carte des départements français"
-          onPointerDown={onPointerDown}
-        >
-          {franceMap.locations.map((loc) => {
-            const r = result[loc.id]
-            const fill =
-              mode === 'heatmap'
-                ? heatColor(loc.id, stats)
-                : r === 'ok'
-                  ? '#22c55e'
-                  : r === 'ko'
-                    ? '#ef4444'
-                    : r === 'target'
-                      ? '#3b82f6'
-                      : '#ffffff'
-            return (
-              <path
-                key={loc.id}
-                ref={(el) => { pathRefs.current[loc.id] = el }}
-                d={loc.path}
-                fill={fill}
-                className="dept-path"
-                onClick={() => clickDept(loc.id)}
-              >
-                <title>{mode === 'heatmap' ? `${byCode[loc.id].nom} (${loc.id})` : ''}</title>
-              </path>
-            )
-          })}
-        </svg>
-
-        <div className="map-controls">
-          <button onClick={() => zoomButton(1 / 1.6)} aria-label="Zoomer">+</button>
-          <button onClick={() => zoomButton(1.6)} aria-label="Dézoomer">−</button>
-          <button className="map-idf" onClick={zoomIDF} aria-label="Zoomer sur l’Île-de-France">
-            IDF
-          </button>
-          {zoomed && (
-            <button className="map-reset" onClick={() => setVb(BASE)} aria-label="Vue d’ensemble">
-              ⤢
-            </button>
-          )}
-        </div>
-      </div>
-
-      <p className="map-tip">Pince pour zoomer · glisse pour te déplacer · « IDF » pour la région parisienne</p>
-    </div>
+    <ViewIn key="heatmap">
+      <CarteHeatmap />
+    </ViewIn>
   )
 }
