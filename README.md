@@ -1,8 +1,8 @@
 # DéparteMental 🇫🇷
 
 **▶️ Le jeu se lance en local** — voir [Développement](#développement). Il n'y a pas de version en
-ligne : la dépendance `canopui` est montée en lien local (`file:../../QVL-CanopUI`), qui n'existe
-pas sur un hébergeur.
+ligne : `canopui` est publiée sur le registre privé `npm.qvl-project.com`, qu'un hébergeur ne peut
+pas lire sans jeton.
 
 Le jeu pour enfin retenir les 101 départements français : codes, noms, préfectures et sous-préfectures.
 
@@ -20,9 +20,9 @@ Toute la progression est stockée en `localStorage` — pas de compte, pas de ba
 React 19 + TypeScript + Vite, et **CanopUI** — le design system maison, qui fournit ici le thème,
 les composants (`Card`, `Choice`, `SvgMap`, `Lives`…), les sons et le fond animé.
 
-Les versions de l'outillage sont plafonnées par la librairie : **vite ^7** (sa dépendance de pair),
-**typescript 5.9** et **eslint ^9**, alignés sur les siens — montée en lien symbolique, elle résout
-ses types et sa configuration de lint depuis son propre dossier. Monter au-delà casse le build.
+Les versions de l'outillage sont plafonnées par la librairie : **vite ^7**, **@mui/material ^9**,
+**framer-motion ^13**, **react 19** et **@emotion ^11** sont ses dépendances de pair, donc c'est
+**notre** copie qu'elle utilise. Monter au-delà d'une de ces bornes casse le build.
 
 Données issues de `départements.csv.txt` (source de vérité), converties en JSON :
 
@@ -32,17 +32,12 @@ npm run data    # régénère src/data/departements.json depuis le CSV
 
 ## Développement
 
-CanopUI n'est pas publiée : elle est consommée en dépendance locale
-(`"canopui": "file:../../QVL-CanopUI"`). Un clone frais ne démarre pas tant que le repo voisin n'est
-pas présent **et construit** — `npm install` résout le lien vers `dist/`, qui n'existe qu'après un
-build de la librairie.
+CanopUI est consommée depuis le registre privé de la flotte, déclaré dans le `.npmrc` du repo :
+`registry=https://npm.qvl-project.com/`. Il relaie aussi npmjs, donc tout le reste des dépendances
+passe par lui — un clone frais n'a besoin de rien d'autre que d'un accès au registre.
 
-```bash
-git clone <QVL-CanopUI> ../../QVL-CanopUI
-cd ../../QVL-CanopUI && npm install && npm run build
-```
-
-Puis, depuis ce repo :
+La version est **épinglée à l'exact** (`"canopui": "3.0.1"`) et non en `^` : une montée de la
+librairie se décide et se relit, elle ne s'attrape pas au détour d'un `npm install`.
 
 ```bash
 npm install
