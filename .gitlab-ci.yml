@@ -1,0 +1,51 @@
+# CI/CD HB-Front-DeparteMental — base commune : template node QVL-ToolBox/PipeLine
+include:
+  - remote: "https://raw.githubusercontent.com/QVL-ToolBox/PipeLine/main/node.gitlab-ci.yml"
+
+stages:
+  - test
+  - build
+  - deploy
+
+# eslint seul : ce dépôt n'a ni prettier ni script `format:check` (le template
+# appelle `npm run lint` ET `npm run format:check`). Même surcharge que StatBar.
+lint:
+  script:
+    - npm ci
+    - npm run lint
+
+# Pas de tests dans ce dépôt (ni vitest ni suite). On retire le job plutôt que
+# de le rendre vert à vide. À reprendre quand une suite existera.
+test:
+  rules:
+    - when: never
+
+# Front 100 % statique : toute la progression est en localStorage, aucun backend
+# à contacter, donc aucune URL à injecter au build. Le `build` du template
+# (`npm ci && npm run build`) convient tel quel — `npm run build` fait ici
+# `tsc -b && vite build`, et le greffon canopyVideo recopie les fonds animés.
+
+# Déploiement : seul dist/ est remplacé — server.js, app.js et leurs dépendances
+# vivent sur le serveur et ne bougent pas d'un déploiement à l'autre.
+deploy:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  dependencies: [build]
+  script:
+    - sudo /usr/local/bin/hb-deploy-node hb-departemental "$CI_PROJECT_DIR"
+
+# auto-pull du clone local persistant sur /mnt/c (évite les checkouts périmés)
+update-checkout:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  allow_failure: true
+  dependencies: []
+  variables:
+    CLONE_LOCAL: /mnt/c/QVL/QVL-Hobbies/HB-Front-DeparteMental
+  script:
+    - git -C "$CLONE_LOCAL" fetch "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git" main
+    - git -C "$CLONE_LOCAL" checkout main
+    - git -C "$CLONE_LOCAL" merge --ff-only FETCH_HEAD
+    - git -C "$CLONE_LOCAL" log --oneline -1
