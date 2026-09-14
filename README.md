@@ -1,8 +1,7 @@
 # DéparteMental 🇫🇷
 
-**▶️ Le jeu se lance en local** — voir [Développement](#développement). Il n'y a pas de version en
-ligne : `canopui` est publiée sur le registre privé `npm.qvl-project.com`, qu'un hébergeur ne peut
-pas lire sans jeton.
+**▶️ Le jeu se déploie depuis `main`** — la pipeline GitLab construit le projet et publie `dist/` à
+chaque poussée. Pour le faire tourner sur son poste, voir [Développement](#développement).
 
 Le jeu pour enfin retenir les 101 départements français : codes, noms, préfectures et sous-préfectures.
 
